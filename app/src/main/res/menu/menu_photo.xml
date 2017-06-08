@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_local_album"
+        android:title="系统相册"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_net_album"
+        android:title="网络图片"
+        app:showAsAction="never" />
+</menu>

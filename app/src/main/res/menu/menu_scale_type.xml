@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_center_crop"
+        android:title="CENTER_CROP"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_start_crop"
+        android:title="START_CROP"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_end_crop"
+        android:title="END_CROP"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_fit_xy"
+        android:title="FIT_XY"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_clear_cache"
+        android:title="清空缓存"
+        app:showAsAction="never" />
+</menu>
