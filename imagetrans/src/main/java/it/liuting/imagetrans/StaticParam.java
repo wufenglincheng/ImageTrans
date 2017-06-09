@@ -5,6 +5,9 @@ import android.widget.ImageView;
 
 import java.util.List;
 
+import it.liuting.imagetrans.listener.ImageLoad;
+import it.liuting.imagetrans.listener.SourceImageViewParam;
+
 /**
  * Created by liuting on 17/5/27.
  */

@@ -1,16 +1,10 @@
 package it.liuting.imagetrans.image;
 
-/*******************************************************************************
- * Created by liuting on 17/1/10.
- *******************************************************************************/
-
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.support.v4.view.MotionEventCompat;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,18 +16,16 @@ import android.widget.OverScroller;
 
 import it.liuting.imagetrans.Util;
 import it.liuting.imagetrans.listener.OnGestureListener;
-import it.liuting.imagetrans.listener.OnMatrixChangedListener;
-import it.liuting.imagetrans.listener.OnOutsidePhotoTapListener;
-import it.liuting.imagetrans.listener.OnPhotoTapListener;
 import it.liuting.imagetrans.listener.OnPullCloseListener;
-import it.liuting.imagetrans.listener.OnScaleChangedListener;
-import it.liuting.imagetrans.listener.OnSingleFlingListener;
-import it.liuting.imagetrans.listener.OnViewTapListener;
 
+/**
+ * Created by liuting on 17/6/9.
+ * modify base on PhotoView
+ * 基于PhotoView修改，增加的下拉拖动关闭手势
+ */
 
-public class ImageGesturesAttacher implements View.OnTouchListener,
-        OnGestureListener {
-
+public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureListener {
+    private static final float DEFAULT_READMODE_SCALE = 2.0f;
     //默认最大缩放比例
     private static float DEFAULT_MAX_SCALE = 3.0f;
     //默认中等缩放比例
@@ -43,73 +35,66 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
     //默认手势最小缩放比例，松开手回到 DEFAULT_MIN_SCALE
     private static float DEFAULT_GESTURE_MIN_SCALE = 0.2f;
     //默认缩放间隔时间
-    private static int DEFAULT_ZOOM_DURATION = 200;
-
+    private static int DEFAULT_ANIM_DURATION = 200;
     private static final int EDGE_NONE = -1;
     private static final int EDGE_LEFT = 0;
     private static final int EDGE_RIGHT = 1;
     private static final int EDGE_BOTH = 2;
-    private static int SINGLE_TOUCH = 1;
-
-    //缩放动画插值器
+    private ImageView mImageView;
+    private float gestureMinScale = DEFAULT_GESTURE_MIN_SCALE;
+    //拖动关闭手势的边界值，超过这个边界值则执行关闭动画，反之回到基础位置
+    private int pullCloseEdge;
+    //基础旋转角度
+    private float mBaseRotation;
+    private int mAnimDuration = DEFAULT_ANIM_DURATION;
+    //动画时间插值器
     private Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
-    private int mZoomDuration = DEFAULT_ZOOM_DURATION;
+    //阅读模式的判定比例，用于判断是否是长图
+    private float readModeScale = DEFAULT_READMODE_SCALE;
+    //阅读模式（长图的默认适宽显示）
+    private boolean isReadMode = true;
+    //是否是长图
+    private boolean isLongImage = false;
+    //图像显示的基础矩阵
+    private final Matrix mBaseMatrix = new Matrix();
+    //图像显示的当前矩阵
+    private final Matrix mDrawMatrix = new Matrix();
+    //图像显示的变换矩阵
+    private final Matrix mSuppMatrix = new Matrix();
+    //当前显示的矩形
+    private final RectF mDisplayRect = new RectF();
+    //用于缓存矩阵的九宫格的值
+    private final float[] mMatrixValues = new float[9];
+    private boolean mAllowParentInterceptOnEdge = true;
+    private boolean mBlockParentIntercept = false;
+    //是否执行拖动关闭手势
+    private boolean isPullDownAction = false;
+    //图像的ScaleType
+    private ImageView.ScaleType mScaleType = ImageView.ScaleType.FIT_CENTER;
+    private int mScrollEdge = EDGE_BOTH;
     private float mMinScale = DEFAULT_MIN_SCALE;
     private float mMidScale = DEFAULT_MID_SCALE;
     private float mMaxScale = DEFAULT_MAX_SCALE;
-
-    private boolean mAllowParentInterceptOnEdge = true;
-    private boolean mBlockParentIntercept = false;
-
-    private ImageView mImageView;
-
     // 手势检测器
     private GestureDetector mGestureDetector;
     private CustomGestureDetector mScaleDragDetector;
-
-    private final Matrix mBaseMatrix = new Matrix();
-    private final Matrix mDrawMatrix = new Matrix();
-    private final Matrix mSuppMatrix = new Matrix();
-    private final RectF mDisplayRect = new RectF();
-    private final float[] mMatrixValues = new float[9];
-
-    // 相关监听器
-    private OnMatrixChangedListener mMatrixChangeListener;
-    private OnPhotoTapListener mPhotoTapListener;
-    private OnOutsidePhotoTapListener mOutsidePhotoTapListener;
-    private OnViewTapListener mViewTapListener;
-    private View.OnClickListener mOnClickListener;
+    //手势长按监听
     private View.OnLongClickListener mLongClickListener;
-    private OnScaleChangedListener mScaleChangeListener;
-    private OnSingleFlingListener mSingleFlingListener;
+    //手势点击监听
+    private View.OnClickListener mOnClickListener;
+    //下拉拖动关闭手势的关闭回调
     private OnPullCloseListener mOnPullCloseListener;
-
+    //快速滑动的动画
     private FlingRunnable mCurrentFlingRunnable;
-    private int mScrollEdge = EDGE_BOTH;
-    private float mBaseRotation;
-
-    private boolean mZoomEnabled = true;
-    //是否执行拖动关闭手势
-    private boolean isPullCloseAction = false;
-    //拖动关闭手势的边界值
-    private int pullCloseEdge;
-    private boolean isReadMode = true;
-    private boolean isPreviewMode = false;
-
-    private ImageView.ScaleType mScaleType = ImageView.ScaleType.FIT_CENTER;
 
     public ImageGesturesAttacher(ImageView imageView) {
-        mImageView = imageView;
+        this.mImageView = imageView;
+        //初始化下拉的边界值
         pullCloseEdge = Util.dpToPx(200, imageView.getContext());
-        imageView.setOnTouchListener(this);
-        if (imageView.isInEditMode()) {
-            return;
-        }
-
+        //设置旋转角度为0
         mBaseRotation = 0.0f;
-
+        //新建手势监听器
         mScaleDragDetector = new CustomGestureDetector(imageView.getContext(), this);
-
         mGestureDetector = new GestureDetector(imageView.getContext(), new GestureDetector.SimpleOnGestureListener() {
 
             @Override
@@ -118,24 +103,6 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
                     mLongClickListener.onLongClick(mImageView);
                 }
             }
-
-            @Override
-            public boolean onFling(MotionEvent e1, MotionEvent e2,
-                                   float velocityX, float velocityY) {
-                if (mSingleFlingListener != null) {
-                    if (getScale() > DEFAULT_MIN_SCALE) {
-                        return false;
-                    }
-
-                    if (MotionEventCompat.getPointerCount(e1) > SINGLE_TOUCH
-                            || MotionEventCompat.getPointerCount(e2) > SINGLE_TOUCH) {
-                        return false;
-                    }
-
-                    return mSingleFlingListener.onFling(e1, e2, velocityX, velocityY);
-                }
-                return false;
-            }
         });
 
         mGestureDetector.setOnDoubleTapListener(new GestureDetector.OnDoubleTapListener() {
@@ -143,33 +110,6 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
             public boolean onSingleTapConfirmed(MotionEvent e) {
                 if (mOnClickListener != null) {
                     mOnClickListener.onClick(mImageView);
-                }
-                final RectF displayRect = getDisplayRect();
-
-                final float x = e.getX(), y = e.getY();
-
-                if (mViewTapListener != null) {
-                    mViewTapListener.onViewTap(mImageView, x, y);
-                }
-
-                if (displayRect != null) {
-
-                    if (displayRect.contains(x, y)) {
-
-                        float xResult = (x - displayRect.left)
-                                / displayRect.width();
-                        float yResult = (y - displayRect.top)
-                                / displayRect.height();
-
-                        if (mPhotoTapListener != null) {
-                            mPhotoTapListener.onPhotoTap(mImageView, xResult, yResult);
-                        }
-                        return true;
-                    } else {
-                        if (mOutsidePhotoTapListener != null) {
-                            mOutsidePhotoTapListener.onOutsidePhotoTap(mImageView);
-                        }
-                    }
                 }
                 return false;
             }
@@ -189,7 +129,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
                         setScale(getMinimumScale(), x, y, true);
                     }
                 } catch (ArrayIndexOutOfBoundsException e) {
-                    // Can sometimes happen when getX() and getY() is called
+                    // 这个异常有时会发生在 getX() 和 getY() 这俩个方法上
                 }
 
                 return true;
@@ -197,493 +137,51 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
 
             @Override
             public boolean onDoubleTapEvent(MotionEvent e) {
-                // Wait for the confirmed onDoubleTap() instead
                 return false;
             }
         });
     }
 
-    public void setOnDoubleTapListener(GestureDetector.OnDoubleTapListener newOnDoubleTapListener) {
-        this.mGestureDetector.setOnDoubleTapListener(newOnDoubleTapListener);
-    }
-
-    public void setOnScaleChangeListener(OnScaleChangedListener onScaleChangeListener) {
-        this.mScaleChangeListener = onScaleChangeListener;
-    }
-
-    public void setOnSingleFlingListener(OnSingleFlingListener onSingleFlingListener) {
-        this.mSingleFlingListener = onSingleFlingListener;
-    }
-
-    @Deprecated
-    public boolean isZoomEnabled() {
-        return mZoomEnabled;
-    }
-
-    public RectF getDisplayRect() {
-        checkMatrixBounds();
-        return getDisplayRect(getDrawMatrix());
-    }
-
-    public boolean setDisplayMatrix(Matrix finalMatrix) {
-        if (finalMatrix == null) {
-            throw new IllegalArgumentException("Matrix cannot be null");
-        }
-
-        if (mImageView.getDrawable() == null) {
-            return false;
-        }
-
-        mSuppMatrix.set(finalMatrix);
-        setImageViewMatrix(getDrawMatrix());
-        checkMatrixBounds();
-
-        return true;
-    }
-
-    public void setBaseRotation(final float degrees) {
-        mBaseRotation = degrees % 360;
-        update();
-        setRotationBy(mBaseRotation);
-        checkAndDisplayMatrix();
-    }
-
-    public void setRotationTo(float degrees) {
-        mSuppMatrix.setRotate(degrees % 360);
-        checkAndDisplayMatrix();
-    }
-
-    public void setRotationBy(float degrees) {
-        mSuppMatrix.postRotate(degrees % 360);
-        checkAndDisplayMatrix();
-    }
-
-    public float getMinimumScale() {
-        return mMinScale;
-    }
-
-    public float getMediumScale() {
-        return mMidScale;
-    }
-
-    public float getMaximumScale() {
-        return mMaxScale;
-    }
-
-    public float getScale() {
-        return (float) Math.sqrt((float) Math.pow(getValue(mSuppMatrix, Matrix.MSCALE_X), 2) + (float) Math.pow(getValue(mSuppMatrix, Matrix.MSKEW_Y), 2));
-    }
-
-    public ImageView.ScaleType getScaleType() {
-        return mScaleType;
-    }
-
-    @Override
-    public void onDrag(float dx, float dy) {
-        if (!isPreviewMode) {
-            if (mScaleDragDetector.isScaling()) {
-                return;//在缩放状态下禁止拖动
-            }
-            if (getScale() <= getMinimumScale()) {
-                onPullClose(dx, dy);
-            } else {
-                mSuppMatrix.postTranslate(dx, dy);
-                checkAndDisplayMatrix();
-            }
-        }
-
-        /*
-         * Here we decide whether to let the ImageView's parent to start taking
-         * over the touch event.
-         *
-         * First we check whether this function is enabled. We never want the
-         * parent to take over if we're scaling. We then check the edge we're
-         * on, and the direction of the scroll (i.e. if we're pulling against
-         * the edge, aka 'overscrolling', let the parent take over).
-         */
-        ViewParent parent = mImageView.getParent();
-        if (mAllowParentInterceptOnEdge && !mScaleDragDetector.isScaling() && !mBlockParentIntercept) {
-            if (mScrollEdge == EDGE_BOTH
-                    || (mScrollEdge == EDGE_LEFT && dx >= 1f)
-                    || (mScrollEdge == EDGE_RIGHT && dx <= -1f)) {
-                if (parent != null) {
-                    parent.requestDisallowInterceptTouchEvent(false);
-                }
-            }
-        } else {
-            if (parent != null) {
-                parent.requestDisallowInterceptTouchEvent(true);
-            }
-        }
-    }
-
     /**
-     * 计算是否执行关闭手势
-     *
-     * @param dx
-     * @param dy
+     * 更新drawable的默认显示矩阵
      */
-
-    private void onPullClose(float dx, float dy) {
-        if (!isPullCloseAction) {
-            if (Math.abs(dx) < Math.abs(dy)) {
-                isPullCloseAction = true;
-            } else {
-                checkAndDisplayMatrix();
-            }
-        } else {
-            //计算当前下拉移动的进度值
-            float mCurrentY = getValue(mDrawMatrix, Matrix.MTRANS_Y) + getDisplayRect(mBaseMatrix).height() / 2;
-            float centerY = mImageView.getHeight() / 2;
-            if (mCurrentY - centerY >= 0) {
-                //当下拉时，改变图片的scale
-                dx = dx + getValue(mSuppMatrix, Matrix.MTRANS_X);//计算当前应该移动的距离X
-                dy = dy + getValue(mSuppMatrix, Matrix.MTRANS_Y);//计算当前应该移动的距离Y
-                float preScale = 1 - getValue(mSuppMatrix, Matrix.MSCALE_X);//得到上一次的scale
-                float minProgress = centerY / 5;//下拉进度的单位距离
-                float factor = Math.abs(mCurrentY - centerY) / minProgress * 0.1f;//下拉scale进度
-                if (factor > 1 - DEFAULT_GESTURE_MIN_SCALE) {
-                    factor = 1 - DEFAULT_GESTURE_MIN_SCALE;
-                }
-                float scale = 1 - factor;
-                mImageView.setBackgroundColor(Color.argb((int) (255 - 200 * factor), 0, 0, 0));
-                //这里避免矩阵乘法导致 MTRANS_Y 错误，直接设置scale，清空其他信息
-                mSuppMatrix.setScale(scale, scale);
-                /**由于 在{@link #getDrawMatrix()}中 mBaseMatrix 和 mSuppMatrix 相乘导致的 MTRANS_Y先乘了scale,造成Y轴坐标不正确，在这里进行补齐 **/
-                dy += getValue(mBaseMatrix, Matrix.MTRANS_Y) * (factor - preScale);
-                dx += mImageView.getWidth() * (1 - scale - preScale) * .2f;
-            }
-            mSuppMatrix.postTranslate(dx, dy);
-            setImageViewMatrix(getDrawMatrix());
-        }
-    }
-
-    /**
-     * 检查是否执行关闭还是回到原位
-     */
-    private void checkPullClose() {
-        float mCurrentY = getValue(mDrawMatrix, Matrix.MTRANS_Y) + getDisplayRect(mBaseMatrix).height() / 2;
-        float centerY = mImageView.getHeight() / 2;
-        float factor = Math.abs(mCurrentY - centerY) / pullCloseEdge;
-        if (factor >= 1) {
-            if (mOnPullCloseListener != null) mOnPullCloseListener.onClose();
-        } else {
-            isPullCloseAction = false;
-            RectF srcRect = new RectF(getDisplayRect(mDrawMatrix));
-            RectF dstRect = new RectF(getDisplayRect(mBaseMatrix));
-            float srcScale = getValue(mSuppMatrix, Matrix.MSCALE_X);
-            if (srcRect != null && dstRect != null) {
-                mImageView.post(new ZoomAndTransRunnable(srcRect, dstRect,
-                        srcScale, mMinScale));
-            }
-        }
-
-    }
-
-    @Override
-    public void onFling(float startX, float startY, float velocityX,
-                        float velocityY) {
-        mCurrentFlingRunnable = new FlingRunnable(mImageView.getContext());
-        mCurrentFlingRunnable.fling(getImageViewWidth(mImageView),
-                getImageViewHeight(mImageView), (int) velocityX, (int) velocityY);
-        mImageView.post(mCurrentFlingRunnable);
-    }
-
-    @Override
-    public void onScale(float scaleFactor, float focusX, float focusY) {
-        if (isPreviewMode) return;
-        if ((getScale() < mMaxScale || scaleFactor < 1f) && (getScale() > DEFAULT_GESTURE_MIN_SCALE || scaleFactor > 1f)) {
-            if (mScaleChangeListener != null) {
-                mScaleChangeListener.onScaleChange(scaleFactor, focusX, focusY);
-            }
-            mSuppMatrix.postScale(scaleFactor, scaleFactor, focusX, focusY);
-            checkAndDisplayMatrix();
-        }
-    }
-
-    @Override
-    public boolean onTouch(View v, MotionEvent ev) {
-        boolean handled = false;
-
-        if (mZoomEnabled && Util.hasDrawable((ImageView) v)) {
-            switch (ev.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    ViewParent parent = v.getParent();
-                    // First, disable the Parent from intercepting the touch
-                    // event
-                    if (parent != null) {
-                        parent.requestDisallowInterceptTouchEvent(true);
-                    }
-
-                    // If we're flinging, and the user presses down, cancel
-                    // fling
-                    cancelFling();
-                    break;
-
-                case MotionEvent.ACTION_CANCEL:
-                case MotionEvent.ACTION_UP:
-                    if (isPullCloseAction) {
-                        //当前是拖动关闭手势中，则执行是否关闭判断
-                        checkPullClose();
-                    } else if (getScale() < mMinScale) {
-                        // 如果当前scale 小于最小scale 则开始缩放动画返回minScale
-                        RectF rect = getDisplayRect();
-                        if (rect != null) {
-                            v.post(new AnimatedZoomRunnable(getScale(), mMinScale,
-                                    rect.centerX(), rect.centerY()));
-                            handled = true;
-                        }
-                    }
-                    break;
-            }
-
-            // Try the Scale/Drag detector
-            if (mScaleDragDetector != null) {
-                boolean wasScaling = mScaleDragDetector.isScaling();
-                boolean wasDragging = mScaleDragDetector.isDragging();
-
-                handled = mScaleDragDetector.onTouchEvent(ev);
-
-                boolean didntScale = !wasScaling && !mScaleDragDetector.isScaling();
-                boolean didntDrag = !wasDragging && !mScaleDragDetector.isDragging();
-
-                mBlockParentIntercept = didntScale && didntDrag;
-            }
-            // Check to see if the user double tapped
-            if (mGestureDetector != null && mGestureDetector.onTouchEvent(ev)) {
-                handled = true;
-            }
-
-        }
-
-        return handled;
-    }
-
-    public void setAllowParentInterceptOnEdge(boolean allow) {
-        mAllowParentInterceptOnEdge = allow;
-    }
-
-    public void setMinimumScale(float minimumScale) {
-        Util.checkZoomLevels(minimumScale, mMidScale, mMaxScale);
-        mMinScale = minimumScale;
-    }
-
-    public void setMediumScale(float mediumScale) {
-        Util.checkZoomLevels(mMinScale, mediumScale, mMaxScale);
-        mMidScale = mediumScale;
-    }
-
-    public void setMaximumScale(float maximumScale) {
-        Util.checkZoomLevels(mMinScale, mMidScale, maximumScale);
-        mMaxScale = maximumScale;
-    }
-
-    public void setScaleLevels(float minimumScale, float mediumScale, float maximumScale) {
-        Util.checkZoomLevels(minimumScale, mediumScale, maximumScale);
-        mMinScale = minimumScale;
-        mMidScale = mediumScale;
-        mMaxScale = maximumScale;
-    }
-
-    public void setOnLongClickListener(View.OnLongClickListener listener) {
-        mLongClickListener = listener;
-    }
-
-    public void setOnPullCloseListener(OnPullCloseListener listener) {
-        mOnPullCloseListener = listener;
-    }
-
-    public void setOnClickListener(View.OnClickListener listener) {
-        mOnClickListener = listener;
-    }
-
-    public void setOnMatrixChangeListener(OnMatrixChangedListener listener) {
-        mMatrixChangeListener = listener;
-    }
-
-    public void setOnPhotoTapListener(OnPhotoTapListener listener) {
-        mPhotoTapListener = listener;
-    }
-
-    public void setOnOutsidePhotoTapListener(OnOutsidePhotoTapListener mOutsidePhotoTapListener) {
-        this.mOutsidePhotoTapListener = mOutsidePhotoTapListener;
-    }
-
-    public void setOnViewTapListener(OnViewTapListener listener) {
-        mViewTapListener = listener;
-    }
-
-    public void setScale(float scale) {
-        setScale(scale, false);
-    }
-
-    public void setScale(float scale, boolean animate) {
-        setScale(scale,
-                (mImageView.getRight()) / 2,
-                (mImageView.getBottom()) / 2,
-                animate);
-    }
-
-    public void setScale(float scale, float focalX, float focalY,
-                         boolean animate) {
-        // Check to see if the scale is within bounds
-        if (scale < mMinScale || scale > mMaxScale) {
-            throw new IllegalArgumentException("Scale must be within the range of minScale and maxScale");
-        }
-
-        if (animate) {
-            mImageView.post(new AnimatedZoomRunnable(getScale(), scale,
-                    focalX, focalY));
-        } else {
-            mSuppMatrix.setScale(scale, scale, focalX, focalY);
-            checkAndDisplayMatrix();
-        }
-    }
-
-    /**
-     * Set the zoom interpolator
-     *
-     * @param interpolator the zoom interpolator
-     */
-    public void setZoomInterpolator(Interpolator interpolator) {
-        mInterpolator = interpolator;
-    }
-
-    public void setScaleType(ImageView.ScaleType scaleType) {
-        if (Util.isSupportedScaleType(scaleType) && scaleType != mScaleType) {
-            mScaleType = scaleType;
-            update();
-        }
-    }
-
-    public boolean isZoomable() {
-        return mZoomEnabled;
-    }
-
-    public void setZoomable(boolean zoomable) {
-        mZoomEnabled = zoomable;
-        update();
-    }
-
-    public void setPreviewMode(boolean mode) {
-        isPreviewMode = mode;
-    }
-
     public void update() {
-        if (mZoomEnabled) {
-            // Update the base matrix using the current drawable
-            updateBaseMatrix(mImageView.getDrawable());
-        } else {
-            // Reset the Matrix...
-            resetMatrix();
-        }
+        // 根据当前的drawable更新显示矩阵
+        updateBaseMatrix(mImageView.getDrawable());
+        // 重置矩阵
+        resetMatrix();
     }
 
     /**
-     * Get the display matrix
-     *
-     * @param matrix target matrix to copy to
+     * 重置矩阵
      */
-    public void getDisplayMatrix(Matrix matrix) {
-        matrix.set(getDrawMatrix());
-    }
-
-    /**
-     * Get the current support matrix
-     */
-    public void getSuppMatrix(Matrix matrix) {
-        matrix.set(mSuppMatrix);
-    }
-
-    private Matrix getDrawMatrix() {
-        mDrawMatrix.set(mBaseMatrix);
-        mDrawMatrix.postConcat(mSuppMatrix);
-        return mDrawMatrix;
-    }
-
-    public Matrix getImageMatrix() {
-        return mDrawMatrix;
-    }
-
-    public void setZoomTransitionDuration(int milliseconds) {
-        this.mZoomDuration = milliseconds;
-    }
-
-    /**
-     * Helper method that 'unpacks' a Matrix and returns the required value
-     *
-     * @param matrix     Matrix to unpack
-     * @param whichValue Which value from Matrix.M* to return
-     * @return returned value
-     */
-    private float getValue(Matrix matrix, int whichValue) {
-        matrix.getValues(mMatrixValues);
-        return mMatrixValues[whichValue];
-    }
-
-    /**
-     * Resets the Matrix back to FIT_CENTER, and then displays its contents
-     */
-    private void resetMatrix() {
-        if (!isReadMode)//在阅读模式已经reset了
-            mSuppMatrix.reset();
+    public void resetMatrix() {
+        resetSuppMatrix();
         setRotationBy(mBaseRotation);
         setImageViewMatrix(getDrawMatrix());
         checkMatrixBounds();
     }
 
-    private void setImageViewMatrix(Matrix matrix) {
-        mImageView.setImageMatrix(matrix);
-        Log.e("setImageViewMatrix", getValue(matrix, Matrix.MTRANS_Y) + "--->" + getValue(matrix, Matrix.MSCALE_X));
-        // Call MatrixChangedListener if needed
-        if (mMatrixChangeListener != null) {
-            RectF displayRect = getDisplayRect(matrix);
-            if (displayRect != null) {
-                mMatrixChangeListener.onMatrixChanged(displayRect);
-            }
-        }
-    }
-
     /**
-     * Helper method that simply checks the Matrix, and then displays the result
+     * 重置变形矩阵，如果是长图就直接变形成适宽模式
      */
-    private void checkAndDisplayMatrix() {
-        if (checkMatrixBounds()) {
-            setImageViewMatrix(getDrawMatrix());
+    private void resetSuppMatrix() {
+        mSuppMatrix.reset();
+        if (isLongImage) {
+            mSuppMatrix.setScale(getMediumScale(), getMediumScale());
         }
+
     }
 
     /**
-     * Helper method that maps the supplied Matrix to the current Drawable
+     * 计算基础显示矩阵
      *
-     * @param matrix - Matrix to map Drawable against
-     * @return RectF - Displayed Rectangle
-     */
-    private RectF getDisplayRect(Matrix matrix) {
-        Drawable d = mImageView.getDrawable();
-        if (d != null) {
-            mDisplayRect.set(0, 0, d.getIntrinsicWidth(),
-                    d.getIntrinsicHeight());
-            matrix.mapRect(mDisplayRect);
-            return mDisplayRect;
-        }
-        return null;
-    }
-
-    public Matrix getBaseMatrix() {
-        return mBaseMatrix;
-    }
-
-    /**
-     * Calculate Matrix for FIT_CENTER
-     *
-     * @param drawable - Drawable being displayed
+     * @param drawable
      */
     private void updateBaseMatrix(Drawable drawable) {
         if (drawable == null) {
             return;
         }
-
         final float viewWidth = getImageViewWidth(mImageView);
         final float viewHeight = getImageViewHeight(mImageView);
         final int drawableWidth = drawable.getIntrinsicWidth();
@@ -694,6 +192,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
         final float widthScale = viewWidth / drawableWidth;
         final float heightScale = viewHeight / drawableHeight;
 
+        //根据ScaleType的类型得到相应的矩阵
         if (mScaleType == ImageView.ScaleType.CENTER) {
             mBaseMatrix.postTranslate((viewWidth - drawableWidth) / 2F,
                     (viewHeight - drawableHeight) / 2F);
@@ -717,12 +216,10 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
             if ((int) mBaseRotation % 180 != 0) {
                 mTempSrc = new RectF(0, 0, drawableHeight, drawableWidth);
             }
-
             switch (mScaleType) {
                 case FIT_CENTER:
                     mBaseMatrix.setRectToRect(mTempSrc, mTempDst, Matrix.ScaleToFit.CENTER);
                     break;
-
                 case FIT_START:
                     mBaseMatrix.setRectToRect(mTempSrc, mTempDst, Matrix.ScaleToFit.START);
                     break;
@@ -741,27 +238,55 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
         }
         if (isReadMode) {
             //是在阅读模式下
-            mSuppMatrix.reset();
-            float scale = Math.min(widthScale, heightScale);
             float maxScale = Math.max(widthScale, heightScale);
-            if (maxScale * drawableHeight > 2 * viewHeight) {
+            //判断是否是竖长图
+            if (maxScale * drawableHeight > readModeScale * viewHeight) {
+                isLongImage = true;
+                mMinScale = 1f;
                 //设置中等缩放为适宽的缩放
-                mMidScale = widthScale / scale;
+                mMidScale = widthScale / heightScale;
                 mMaxScale = 1.5f * mMidScale;
-                //在起始就进行适宽缩放
-                mSuppMatrix.postScale(mMidScale, mMidScale);
             }
         }
-        resetMatrix();
     }
 
-    private boolean checkMatrixBounds() {
+    /**
+     * 根据矩阵得到当前的drawable应该占用的矩形区域
+     *
+     * @param matrix
+     * @return RectF - 占用的矩阵区域
+     */
+    private RectF getDisplayRect(Matrix matrix) {
+        Drawable d = mImageView.getDrawable();
+        if (d != null) {
+            mDisplayRect.set(0, 0, d.getIntrinsicWidth(),
+                    d.getIntrinsicHeight());
+            matrix.mapRect(mDisplayRect);
+            return mDisplayRect;
+        }
+        return null;
+    }
 
+    /**
+     * 获取当前矩阵的矩形范围
+     *
+     * @return
+     */
+    public RectF getDisplayRect() {
+        checkMatrixBounds();
+        return getDisplayRect(getDrawMatrix());
+    }
+
+    /**
+     * 检查矩阵，纠正矩阵的位移
+     *
+     * @return
+     */
+    private boolean checkMatrixBounds() {
         final RectF rect = getDisplayRect(getDrawMatrix());
         if (rect == null) {
             return false;
         }
-
         final float height = rect.height(), width = rect.width();
         float deltaX = 0, deltaY = 0;
 
@@ -807,10 +332,41 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
         } else {
             mScrollEdge = EDGE_NONE;
         }
-
-        // Finally actually translate the matrix
+        //纠正矩形的位移
         mSuppMatrix.postTranslate(deltaX, deltaY);
         return true;
+    }
+
+    /**
+     * 设置ImageView的矩阵
+     *
+     * @param matrix
+     */
+    private void setImageViewMatrix(Matrix matrix) {
+        mImageView.setImageMatrix(matrix);
+    }
+
+
+    /**
+     * 把变形矩阵右乘基础矩阵得到显示矩阵
+     *
+     * @return 最终显示的矩阵
+     */
+    private Matrix getDrawMatrix() {
+        mDrawMatrix.set(mBaseMatrix);
+        mDrawMatrix.postConcat(mSuppMatrix);
+        return mDrawMatrix;
+    }
+
+    public void setRotationBy(float degrees) {
+        mSuppMatrix.postRotate(degrees % 360);
+        checkAndDisplayMatrix();
+    }
+
+    private void checkAndDisplayMatrix() {
+        if (checkMatrixBounds()) {
+            setImageViewMatrix(getDrawMatrix());
+        }
     }
 
     private int getImageViewWidth(ImageView imageView) {
@@ -821,6 +377,14 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
         return imageView.getHeight() - imageView.getPaddingTop() - imageView.getPaddingBottom();
     }
 
+    public void run() {
+        mImageView.setOnTouchListener(this);
+    }
+
+    public void pasue() {
+        mImageView.setOnTouchListener(null);
+    }
+
     private void cancelFling() {
         if (mCurrentFlingRunnable != null) {
             mCurrentFlingRunnable.cancelFling();
@@ -828,6 +392,280 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
         }
     }
 
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        boolean handled = false;
+
+        if (Util.hasDrawable((ImageView) v)) {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    ViewParent parent = v.getParent();
+                    // 首先，拦截父 view 的 touch 事件
+                    if (parent != null) {
+                        parent.requestDisallowInterceptTouchEvent(true);
+                    }
+                    // 如果正在快速滑动的状态，如果用户执行DOWM操作，则取消Fling状态
+                    cancelFling();
+                    break;
+
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_UP:
+                    if (isPullDownAction) {
+                        //当前是拖动关闭手势中，则计算是否关闭判断
+                        checkPullClose();
+                    } else if (getScale() < mMinScale) {
+                        // 如果当前scale 小于最小scale 则开始缩放动画返回minScale
+                        RectF rect = getDisplayRect();
+                        if (rect != null) {
+                            v.post(new AnimatedZoomRunnable(getScale(), mMinScale,
+                                    rect.centerX(), rect.centerY()));
+                            handled = true;
+                        }
+                    }
+                    break;
+            }
+            // Try the Scale/Drag detector
+            if (mScaleDragDetector != null) {
+                boolean wasScaling = mScaleDragDetector.isScaling();
+                boolean wasDragging = mScaleDragDetector.isDragging();
+
+                handled = mScaleDragDetector.onTouchEvent(event);
+
+                boolean didntScale = !wasScaling && !mScaleDragDetector.isScaling();
+                boolean didntDrag = !wasDragging && !mScaleDragDetector.isDragging();
+
+                mBlockParentIntercept = didntScale && didntDrag;
+            }
+            // Check to see if the user double tapped
+            if (mGestureDetector != null && mGestureDetector.onTouchEvent(event)) {
+                handled = true;
+            }
+
+        }
+
+        return handled;
+    }
+
+
+    @Override
+    public void onDrag(float dx, float dy) {
+        if (mScaleDragDetector.isScaling()) {
+            return;//在缩放状态下禁止拖动
+        }
+        if (getScale() <= getMinimumScale()) {
+            //当前Scale小于或等于最小Scale,则执行下拉拖动关闭手势
+            onPullDown(dx, dy);
+        } else {
+            mSuppMatrix.postTranslate(dx, dy);
+            checkAndDisplayMatrix();
+        }
+        /*
+         * Here we decide whether to let the ImageView's parent to start taking
+         * over the touch event.
+         *
+         * First we check whether this function is enabled. We never want the
+         * parent to take over if we're scaling. We then check the edge we're
+         * on, and the direction of the scroll (i.e. if we're pulling against
+         * the edge, aka 'overscrolling', let the parent take over).
+         */
+        ViewParent parent = mImageView.getParent();
+        if (mAllowParentInterceptOnEdge && !mScaleDragDetector.isScaling() && !mBlockParentIntercept) {
+            if (mScrollEdge == EDGE_BOTH
+                    || (mScrollEdge == EDGE_LEFT && dx >= 1f)
+                    || (mScrollEdge == EDGE_RIGHT && dx <= -1f)) {
+                if (parent != null) {
+                    parent.requestDisallowInterceptTouchEvent(false);
+                }
+            }
+        } else {
+            if (parent != null) {
+                parent.requestDisallowInterceptTouchEvent(true);
+            }
+        }
+    }
+
+    @Override
+    public void onFling(float startX, float startY, float velocityX, float velocityY) {
+        mCurrentFlingRunnable = new FlingRunnable(mImageView.getContext());
+        mCurrentFlingRunnable.fling(getImageViewWidth(mImageView),
+                getImageViewHeight(mImageView), (int) velocityX, (int) velocityY);
+        mImageView.post(mCurrentFlingRunnable);
+    }
+
+    @Override
+    public void onScale(float scaleFactor, float focusX, float focusY) {
+        if ((getScale() < mMaxScale || scaleFactor < 1f) && (getScale() > gestureMinScale || scaleFactor > 1f)) {
+            mSuppMatrix.postScale(scaleFactor, scaleFactor, focusX, focusY);
+            checkAndDisplayMatrix();
+        }
+    }
+
+    /**
+     * 下拉拖动关闭手势
+     *
+     * @param dx
+     * @param dy
+     */
+    private void onPullDown(float dx, float dy) {
+        if (!isPullDownAction) {
+            //当前不是下拉关闭手势，先计算是否开启下拉手势
+            if (Math.abs(dx) < Math.abs(dy)) {
+                isPullDownAction = true;
+            } else {
+                checkAndDisplayMatrix();
+            }
+        } else {
+            //当前已经是下拉手势，则计算当前下拉移动的进度值
+            float mCurrentY = getValue(mDrawMatrix, Matrix.MTRANS_Y) + getDisplayRect(mBaseMatrix).height() / 2;
+            float centerY = mImageView.getHeight() / 2;
+            if (mCurrentY - centerY >= 0) {
+                //当下拉时，改变图片的scale
+                dx = dx + getValue(mSuppMatrix, Matrix.MTRANS_X);//计算当前应该移动的距离X
+                dy = dy + getValue(mSuppMatrix, Matrix.MTRANS_Y);//计算当前应该移动的距离Y
+                float preScale = 1 - getValue(mSuppMatrix, Matrix.MSCALE_X);//得到上一次的scale
+                float minProgress = centerY / 5;//下拉进度的单位距离
+                float factor = Math.abs(mCurrentY - centerY) / minProgress * 0.1f;//下拉scale进度
+                if (factor > 1 - gestureMinScale) {
+                    factor = 1 - gestureMinScale;
+                }
+                float scale = 1 - factor;
+                mImageView.setBackgroundColor(Color.argb((int) (255 - 200 * factor), 0, 0, 0));
+                //这里避免矩阵乘法导致 MTRANS_Y 错误，直接设置scale，清空其他信息
+                mSuppMatrix.setScale(scale, scale);
+                /**由于 在{@link #getDrawMatrix()}中 mBaseMatrix 和 mSuppMatrix 相乘导致的 MTRANS_Y先乘了scale,造成Y轴坐标不正确，在这里进行补齐 **/
+                dy += getValue(mBaseMatrix, Matrix.MTRANS_Y) * (factor - preScale);
+                dx += mImageView.getWidth() * (1 - scale - preScale) * .2f;
+            }
+            mSuppMatrix.postTranslate(dx, dy);
+            setImageViewMatrix(getDrawMatrix());
+        }
+    }
+
+    /**
+     * 计算当前拖动的距离，如果大于 {@link #pullCloseEdge} 则执行关闭，反之则执行缩放位移动画回到原位
+     */
+    private void checkPullClose() {
+        float mCurrentY = getValue(mDrawMatrix, Matrix.MTRANS_Y) + getDisplayRect(mBaseMatrix).height() / 2;
+        float centerY = mImageView.getHeight() / 2;
+        float factor = Math.abs(mCurrentY - centerY) / pullCloseEdge;
+        if (factor >= 1) {
+            if (mOnPullCloseListener != null) mOnPullCloseListener.onClose();
+        } else {
+            isPullDownAction = false;
+            RectF srcRect = new RectF(getDisplayRect(mDrawMatrix));
+            RectF dstRect = new RectF(getDisplayRect(mBaseMatrix));
+            float srcScale = getValue(mSuppMatrix, Matrix.MSCALE_X);
+            if (srcRect != null && dstRect != null) {
+                mImageView.post(new ZoomAndTransRunnable(srcRect, dstRect,
+                        srcScale, mMinScale));
+            }
+        }
+
+    }
+
+    /**
+     * 设置缩放
+     *
+     * @param scale   缩放值
+     * @param focalX  基于的X点
+     * @param focalY  基于的Y点
+     * @param animate 是否执行缩放动画
+     */
+    public void setScale(float scale, float focalX, float focalY,
+                         boolean animate) {
+        // Check to see if the scale is within bounds
+        if (scale < mMinScale || scale > mMaxScale) {
+            throw new IllegalArgumentException("Scale must be within the range of minScale and maxScale");
+        }
+        if (animate) {
+            mImageView.post(new AnimatedZoomRunnable(getScale(), scale,
+                    focalX, focalY));
+        } else {
+            mSuppMatrix.setScale(scale, scale, focalX, focalY);
+            checkAndDisplayMatrix();
+        }
+    }
+
+    public Matrix getMinMatrix() {
+        Matrix matrix = new Matrix();
+        matrix.set(mBaseMatrix);
+        mSuppMatrix.setScale(mMinScale, mMinScale);
+        matrix.postConcat(mSuppMatrix);
+        return matrix;
+    }
+
+    public float getMinimumScale() {
+        return mMinScale;
+    }
+
+    public float getMediumScale() {
+        return mMidScale;
+    }
+
+    public float getMaximumScale() {
+        return mMaxScale;
+    }
+
+    public float getScale() {
+        return (float) Math.sqrt((float) Math.pow(getValue(mSuppMatrix, Matrix.MSCALE_X), 2) + (float) Math.pow(getValue(mSuppMatrix, Matrix.MSKEW_Y), 2));
+    }
+
+    /**
+     * 获取矩阵的某一宫格的值
+     *
+     * @param matrix
+     * @param whichValue
+     * @return
+     */
+    private float getValue(Matrix matrix, int whichValue) {
+        matrix.getValues(mMatrixValues);
+        return mMatrixValues[whichValue];
+    }
+
+    public void setMinimumScale(float minimumScale) {
+        Util.checkZoomLevels(minimumScale, mMidScale, mMaxScale);
+        mMinScale = minimumScale;
+    }
+
+    public void setMediumScale(float mediumScale) {
+        Util.checkZoomLevels(mMinScale, mediumScale, mMaxScale);
+        mMidScale = mediumScale;
+    }
+
+    public void setMaximumScale(float maximumScale) {
+        Util.checkZoomLevels(mMinScale, mMidScale, maximumScale);
+        mMaxScale = maximumScale;
+    }
+
+    public void setScaleLevels(float minimumScale, float mediumScale, float maximumScale) {
+        Util.checkZoomLevels(minimumScale, mediumScale, maximumScale);
+        mMinScale = minimumScale;
+        mMidScale = mediumScale;
+        mMaxScale = maximumScale;
+    }
+
+    public void setScaleType(ImageView.ScaleType scaleType) {
+        if (Util.isSupportedScaleType(scaleType) && scaleType != mScaleType) {
+            mScaleType = scaleType;
+            update();
+        }
+    }
+
+    /************listener start*****************/
+    public void setOnLongClickListener(View.OnLongClickListener listener) {
+        mLongClickListener = listener;
+    }
+
+    public void setOnClickListener(View.OnClickListener listener) {
+        mOnClickListener = listener;
+    }
+
+    public void setOnPullCloseListener(OnPullCloseListener listener) {
+        mOnPullCloseListener = listener;
+    }
+    /************listener end*****************/
+
+    /*******************动画集合*********************/
     private class AnimatedZoomRunnable implements Runnable {
 
         private final float mFocalX, mFocalY;
@@ -859,7 +697,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
         }
 
         private float interpolate() {
-            float t = 1f * (System.currentTimeMillis() - mStartTime) / mZoomDuration;
+            float t = 1f * (System.currentTimeMillis() - mStartTime) / mAnimDuration;
             t = Math.min(1f, t);
             t = mInterpolator.getInterpolation(t);
             return t;
@@ -979,7 +817,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener,
         }
 
         private float interpolate() {
-            float t = 1f * (System.currentTimeMillis() - mStartTime) / mZoomDuration;
+            float t = 1f * (System.currentTimeMillis() - mStartTime) / mAnimDuration;
             t = Math.min(1f, t);
             t = mInterpolator.getInterpolation(t);
             return t;

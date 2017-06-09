@@ -17,7 +17,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
@@ -27,7 +26,7 @@ import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
-import it.liuting.imagetrans.SourceImageViewParam;
+import it.liuting.imagetrans.listener.SourceImageViewParam;
 
 /**
  * Created by liuting on 17/6/1.

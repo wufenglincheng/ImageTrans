@@ -31,6 +31,7 @@ public class TransformAttacher {
         this.mImageConfig = imageConfig;
     }
 
+
     /**
      * 图片变形动画
      *

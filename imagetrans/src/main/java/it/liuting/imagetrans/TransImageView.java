@@ -5,7 +5,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.ImageView;
@@ -21,7 +20,7 @@ import it.liuting.imagetrans.listener.OnPullCloseListener;
 
 public class TransImageView extends ImageView implements OnPullCloseListener, View.OnLayoutChangeListener {
 
-    private ImageGesturesAttacher mAttacher;
+    private ImageGesturesAttacher mGesturesAttacher;
     private ImageTransformAttacher mTransformAttacher;
     private TempTransformAttacher mTempTransformAttacher;
     private OnCloseListener onCloseListener;
@@ -43,12 +42,12 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
 
     protected void init() {
         setBackgroundColor(Color.argb(0, 0, 0, 0));
-        mAttacher = new ImageGesturesAttacher(this);
+        mGesturesAttacher = new ImageGesturesAttacher(this);
         mTransformAttacher = new ImageTransformAttacher(this);
         mTempTransformAttacher = new TempTransformAttacher(this);
-        mAttacher.setOnPullCloseListener(this);
+        mGesturesAttacher.setOnPullCloseListener(this);
         super.setScaleType(ScaleType.MATRIX);
-        mAttacher.setOnClickListener(new OnClickListener() {
+        mGesturesAttacher.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 onClose();
@@ -67,7 +66,7 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
         if (mImageConfig == null || mImageConfig.thumbnailWeakRefe == null) return;
         isPreview = true;
         super.setImageDrawable(mImageConfig.thumbnailWeakRefe.get());
-        mAttacher.setPreviewMode(true);
+//        mGesturesAttacher.setPreviewMode(true);
         mTempTransformAttacher.runOpenTransform();
 
     }
@@ -77,7 +76,6 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
         if (mImageConfig == null || mImageConfig.thumbnailWeakRefe == null) return;
         isPreview = true;
         super.setImageDrawable(mImageConfig.thumbnailWeakRefe.get());
-        mAttacher.setPreviewMode(true);
         mTempTransformAttacher.showPreview();
     }
 
@@ -99,31 +97,17 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
 
     @Override
     public void setImageDrawable(Drawable drawable) {
-        mAttacher.setPreviewMode(false);
         super.setImageDrawable(drawable);
-        update();
+        mGesturesAttacher.update();
     }
 
-    @Override
-    public void setImageResource(int resId) {
-        super.setImageResource(resId);
-        update();
+    public void runGestures() {
+        mGesturesAttacher.run();
+        mGesturesAttacher.resetMatrix();
     }
 
-    @Override
-    public void setImageURI(Uri uri) {
-        super.setImageURI(uri);
-        update();
-    }
-
-    public void update() {
-        if (null != mAttacher) {
-            mAttacher.update();
-        }
-    }
-
-    public Matrix getBaseMatrix() {
-        return mAttacher.getBaseMatrix();
+    public Matrix getMinMatrix() {
+        return mGesturesAttacher.getMinMatrix();
     }
 
     @Override
@@ -139,7 +123,7 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
 
     @Override
     public void setScaleType(ScaleType scaleType) {
-        mAttacher.setScaleType(scaleType);
+        mGesturesAttacher.setScaleType(scaleType);
     }
 
     @Override
@@ -152,15 +136,10 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
     }
 
     @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-    }
-
-    @Override
     public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
         // 在边界改变的时候更新矩阵
-        if (null != mAttacher) {
-            mAttacher.update();
+        if (null != mGesturesAttacher) {
+            mGesturesAttacher.update();
         }
         mTransformAttacher.onLayoutChange();
         mTempTransformAttacher.onLayoutChange();

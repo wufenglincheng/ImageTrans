@@ -1,4 +1,4 @@
-package it.liuting.imagetrans;
+package it.liuting.imagetrans.listener;
 
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -39,6 +39,7 @@ public interface ImageLoad {
     interface LoadCallback {
         /**
          * 进度
+         *
          * @param progress
          */
         void progress(float progress);

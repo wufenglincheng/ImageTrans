@@ -49,7 +49,7 @@ public class ImageTransformAttacher extends TransformAttacher {
         runningOpen = true;
         //得到结束位置的显示矩形
         RectF endRect = Util.getDisplayRect(mImageView);
-        Log.e("_runOpenTransform",mImageView.isAttachedToWindow() + "---");
+        Log.e("_runOpenTransform", mImageView.isAttachedToWindow() + "---");
 
         //创建矩形转换动画
         Matrix endMatrix = new Matrix(mImageView.getImageMatrix());
@@ -63,9 +63,11 @@ public class ImageTransformAttacher extends TransformAttacher {
             @Override
             public void onAnimationEnd(Animator animation) {
                 runningOpen = false;
-                mImageView.update();
+                mImageView.runGestures();
             }
         });
+        //这里设置矩阵 是为了查看大图根据矩阵分块加载 的逻辑
+        mImageView.setImageMatrix(mImageView.getMinMatrix());
         openTransAnim.start();
     }
 
@@ -94,6 +96,8 @@ public class ImageTransformAttacher extends TransformAttacher {
                 if (closeListener != null) closeListener.close();
             }
         });
+        //这里设置矩阵 是为了查看大图根据矩阵分块加载 的逻辑
+        mImageView.setImageMatrix(mImageView.getMinMatrix());
         closeTrans.start();
     }
 
@@ -186,14 +190,11 @@ public class ImageTransformAttacher extends TransformAttacher {
      * @param canvas
      */
     public void onDraw(Canvas canvas) {
-        Log.e("ImageTransformAttacher", Util.getValue(transformMatrix,Matrix.MSCALE_X) +"---");
         if (mImageView.getDrawable() == null) return;
         int saveCount = canvas.getSaveCount();
         canvas.save();
         canvas.translate(transformRect.left, transformRect.top);
         canvas.clipRect(0, 0, transformRect.width(), transformRect.height());
-        //这里设置矩阵 是为了查看大图根据矩阵分块加载 的逻辑
-        mImageView.setImageMatrix(mImageView.getBaseMatrix());
         canvas.concat(transformMatrix);
         mImageView.getDrawable().draw(canvas);
         canvas.restoreToCount(saveCount);

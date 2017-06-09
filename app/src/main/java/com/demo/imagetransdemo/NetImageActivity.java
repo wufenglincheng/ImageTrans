@@ -22,7 +22,7 @@ import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
-import it.liuting.imagetrans.SourceImageViewParam;
+import it.liuting.imagetrans.listener.SourceImageViewParam;
 
 /**
  * Created by liuting on 17/6/1.

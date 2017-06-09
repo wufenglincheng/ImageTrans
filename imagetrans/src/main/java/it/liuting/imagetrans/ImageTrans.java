@@ -2,9 +2,11 @@ package it.liuting.imagetrans;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.widget.ImageView;
 
 import java.util.List;
+
+import it.liuting.imagetrans.listener.ImageLoad;
+import it.liuting.imagetrans.listener.SourceImageViewParam;
 
 /**
  * Created by liuting on 17/5/27.

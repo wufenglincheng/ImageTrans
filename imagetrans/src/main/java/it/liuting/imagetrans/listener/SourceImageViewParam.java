@@ -1,7 +1,8 @@
-package it.liuting.imagetrans;
+package it.liuting.imagetrans.listener;
 
-import android.graphics.drawable.Drawable;
 import android.view.View;
+
+import it.liuting.imagetrans.ScaleType;
 
 /**
  * Created by liuting on 17/6/6.

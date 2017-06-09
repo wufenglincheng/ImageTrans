@@ -8,6 +8,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import it.liuting.imagetrans.listener.ImageLoad;
+
 
 /**
  * Created by liuting on 17/6/1.

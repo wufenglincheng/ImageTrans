@@ -17,7 +17,7 @@ import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
-import it.liuting.imagetrans.SourceImageViewParam;
+import it.liuting.imagetrans.listener.SourceImageViewParam;
 
 public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBarChangeListener {
     public static final int DEFAULT_MIN_SIZE = MyApplication.dpToPx(100);

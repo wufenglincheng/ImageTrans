@@ -9,7 +9,7 @@ import com.demo.imagetransdemo.imageload.OkHttpImageLoad;
 
 import java.util.regex.Pattern;
 
-import it.liuting.imagetrans.ImageLoad;
+import it.liuting.imagetrans.listener.ImageLoad;
 
 /**
  * Created by liuting on 17/6/1.
