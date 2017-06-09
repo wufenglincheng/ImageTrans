@@ -14,6 +14,7 @@ import android.view.animation.Interpolator;
 import android.widget.ImageView;
 import android.widget.OverScroller;
 
+import it.liuting.imagetrans.TransImageView;
 import it.liuting.imagetrans.Util;
 import it.liuting.imagetrans.listener.OnGestureListener;
 import it.liuting.imagetrans.listener.OnPullCloseListener;
@@ -40,7 +41,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     private static final int EDGE_LEFT = 0;
     private static final int EDGE_RIGHT = 1;
     private static final int EDGE_BOTH = 2;
-    private ImageView mImageView;
+    private TransImageView mImageView;
     private float gestureMinScale = DEFAULT_GESTURE_MIN_SCALE;
     //拖动关闭手势的边界值，超过这个边界值则执行关闭动画，反之回到基础位置
     private int pullCloseEdge;
@@ -87,12 +88,13 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     //快速滑动的动画
     private FlingRunnable mCurrentFlingRunnable;
 
-    public ImageGesturesAttacher(ImageView imageView) {
+    public ImageGesturesAttacher(TransImageView imageView) {
         this.mImageView = imageView;
         //初始化下拉的边界值
         pullCloseEdge = Util.dpToPx(200, imageView.getContext());
         //设置旋转角度为0
         mBaseRotation = 0.0f;
+        mImageView.setOnTouchListener(this);
         //新建手势监听器
         mScaleDragDetector = new CustomGestureDetector(imageView.getContext(), this);
         mGestureDetector = new GestureDetector(imageView.getContext(), new GestureDetector.SimpleOnGestureListener() {
@@ -104,7 +106,6 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
                 }
             }
         });
-
         mGestureDetector.setOnDoubleTapListener(new GestureDetector.OnDoubleTapListener() {
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
@@ -377,14 +378,6 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
         return imageView.getHeight() - imageView.getPaddingTop() - imageView.getPaddingBottom();
     }
 
-    public void run() {
-        mImageView.setOnTouchListener(this);
-    }
-
-    public void pasue() {
-        mImageView.setOnTouchListener(null);
-    }
-
     private void cancelFling() {
         if (mCurrentFlingRunnable != null) {
             mCurrentFlingRunnable.cancelFling();
@@ -396,7 +389,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     public boolean onTouch(View v, MotionEvent event) {
         boolean handled = false;
 
-        if (Util.hasDrawable((ImageView) v)) {
+        if (!mImageView.isRunTransform() && Util.hasDrawable((ImageView) v)) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     ViewParent parent = v.getParent();

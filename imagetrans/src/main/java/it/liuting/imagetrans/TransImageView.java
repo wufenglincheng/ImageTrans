@@ -5,13 +5,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.drawable.Drawable;
+import android.support.annotation.IntRange;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.ImageView;
 
 import it.liuting.imagetrans.image.ImageGesturesAttacher;
-import it.liuting.imagetrans.image.ImageTransformAttacher;
-import it.liuting.imagetrans.image.TempTransformAttacher;
+import it.liuting.imagetrans.image.TransformAttacher;
 import it.liuting.imagetrans.listener.OnPullCloseListener;
 
 /**
@@ -21,10 +21,7 @@ import it.liuting.imagetrans.listener.OnPullCloseListener;
 public class TransImageView extends ImageView implements OnPullCloseListener, View.OnLayoutChangeListener {
 
     private ImageGesturesAttacher mGesturesAttacher;
-    private ImageTransformAttacher mTransformAttacher;
-    private TempTransformAttacher mTempTransformAttacher;
-    private OnCloseListener onCloseListener;
-    private boolean isPreview = false;
+    private TransformAttacher mTransformAttacher;
     private ImageConfig mImageConfig;
 
     public TransImageView(Context context) {
@@ -41,10 +38,9 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
     }
 
     protected void init() {
-        setBackgroundColor(Color.argb(0, 0, 0, 0));
+        setBackgroundAlpha(0);
         mGesturesAttacher = new ImageGesturesAttacher(this);
-        mTransformAttacher = new ImageTransformAttacher(this);
-        mTempTransformAttacher = new TempTransformAttacher(this);
+        mTransformAttacher = new TransformAttacher(this);
         mGesturesAttacher.setOnPullCloseListener(this);
         super.setScaleType(ScaleType.MATRIX);
         mGesturesAttacher.setOnClickListener(new OnClickListener() {
@@ -59,39 +55,30 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
     public void setImageConfig(ImageConfig imageConfig) {
         this.mImageConfig = imageConfig;
         mTransformAttacher.setImageConfig(imageConfig);
-        mTempTransformAttacher.setImageConfig(imageConfig);
     }
 
-    public void startPreviewWithTransform() {
+    public void showThumbWithTransform() {
         if (mImageConfig == null || mImageConfig.thumbnailWeakRefe == null) return;
-        isPreview = true;
         super.setImageDrawable(mImageConfig.thumbnailWeakRefe.get());
-//        mGesturesAttacher.setPreviewMode(true);
-        mTempTransformAttacher.runOpenTransform();
+        mTransformAttacher.showThumbWithTransform();
 
     }
 
-    public void startPreView() {
-        setBackgroundColor(Color.argb(255, 0, 0, 0));
+    public void showThumb() {
+        setBackgroundAlpha(255);
         if (mImageConfig == null || mImageConfig.thumbnailWeakRefe == null) return;
-        isPreview = true;
         super.setImageDrawable(mImageConfig.thumbnailWeakRefe.get());
-        mTempTransformAttacher.showPreview();
+        mTransformAttacher.showThumb();
     }
 
     public void setImageWithTransform(Drawable drawable) {
         setImageDrawable(drawable);
-        if (isPreview) {
-            isPreview = false;
-            mTransformAttacher.runOpenTransform(mTempTransformAttacher.getTempRectF());
-        } else {
-            mTransformAttacher.runOpenTransform(mImageConfig.imageRectF);
-        }
+        mTransformAttacher.showOriginalWithTransform();
     }
 
-    public void setImageWithOutTransform(Drawable drawable) {
-        if (isPreview) isPreview = false;
-        noAlpha();
+    public void setImage(Drawable drawable) {
+        mTransformAttacher.pause();
+        setBackgroundAlpha(255);
         setImageDrawable(drawable);
     }
 
@@ -101,9 +88,11 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
         mGesturesAttacher.update();
     }
 
-    public void runGestures() {
-        mGesturesAttacher.run();
+    public void resetMatrix() {
         mGesturesAttacher.resetMatrix();
+    }
+    public boolean isRunTransform(){
+        return mTransformAttacher.isRunning();
     }
 
     public Matrix getMinMatrix() {
@@ -114,8 +103,6 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
     protected void onDraw(Canvas canvas) {
         if (mTransformAttacher.isRunning()) {
             mTransformAttacher.onDraw(canvas);
-        } else if (isPreview) {
-            mTempTransformAttacher.onDraw(canvas);
         } else {
             super.onDraw(canvas);
         }
@@ -128,11 +115,7 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
 
     @Override
     public void onClose() {
-        if (isPreview) {
-            mTempTransformAttacher.runCloseTransform(onCloseListener);
-            return;
-        }
-        mTransformAttacher.runCloseTransform(onCloseListener);
+        mTransformAttacher.runCloseTransform();
     }
 
     @Override
@@ -142,15 +125,14 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
             mGesturesAttacher.update();
         }
         mTransformAttacher.onLayoutChange();
-        mTempTransformAttacher.onLayoutChange();
     }
 
     public void setOnCloseListener(OnCloseListener listener) {
-        this.onCloseListener = listener;
+        mTransformAttacher.setOnCloseListener(listener);
     }
 
-    public void noAlpha() {
-        setBackgroundColor(Color.argb(255, 0, 0, 0));
+    public void setBackgroundAlpha(@IntRange(from = 0, to = 255) int alpha) {
+        setBackgroundColor(Color.argb(alpha, 0, 0, 0));
     }
 
     public interface OnCloseListener {

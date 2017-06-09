@@ -42,15 +42,15 @@ public class ImageRenderAdapter implements ImageLoad.LoadCallback {
             hasPreview = true;
             loadingView.setVisibility(View.VISIBLE);
             if (StaticParam.isClickIndex(position) && StaticParam.isFirstCheckClickIndex()) {
-                imageView.startPreviewWithTransform();
+                imageView.showThumbWithTransform();
             } else {
-                imageView.startPreView();
+                imageView.showThumb();
             }
         } else {
             if (StaticParam.isClickIndex(position) && StaticParam.isFirstCheckClickIndex()) {
                 hasPreview = true;
             } else {
-                imageView.noAlpha();
+                imageView.setBackgroundAlpha(255);
             }
         }
         imageView.setOnCloseListener(listener);
@@ -80,7 +80,7 @@ public class ImageRenderAdapter implements ImageLoad.LoadCallback {
         loadingView.setVisibility(View.GONE);
         if (StaticParam.isNowIndex(position) && hasPreview)
             imageView.setImageWithTransform(drawable);
-        else imageView.setImageWithOutTransform(drawable);
+        else imageView.setImage(drawable);
     }
 
     public void destroy() {
