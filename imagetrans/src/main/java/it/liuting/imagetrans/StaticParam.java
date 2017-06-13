@@ -13,6 +13,8 @@ import it.liuting.imagetrans.listener.SourceImageViewParam;
  */
 
 public class StaticParam {
+    public static int screenWidth;
+    public static int screenHeight;
     public static int clickIndex;
     public static int nowIndex;
     public static List<String> imageList;

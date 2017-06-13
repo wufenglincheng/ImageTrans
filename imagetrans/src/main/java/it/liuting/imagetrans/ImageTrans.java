@@ -53,6 +53,8 @@ public class ImageTrans {
         StaticParam.clickIndex = nowIndex;
         StaticParam.nowIndex = nowIndex;
         StaticParam.sourceImageViewParam = imageViewParam;
+        StaticParam.screenWidth = Util.getScreenWidth(context);
+        StaticParam.screenHeight = Util.getScreenHeight(context);
         StaticParam.init();
         Intent intent = new Intent(context, ImageShowActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);

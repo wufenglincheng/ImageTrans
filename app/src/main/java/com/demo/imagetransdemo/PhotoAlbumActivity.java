@@ -118,7 +118,7 @@ public class PhotoAlbumActivity extends AppCompatActivity {
                                     int viewPos = layoutPos + pos - position;
                                     View view = recyclerView.getChildAt(viewPos);
                                     if (view != null) return view;
-                                    return holder.itemView;
+                                    return null;
                                 }
 
                                 @Override
@@ -183,7 +183,8 @@ public class PhotoAlbumActivity extends AppCompatActivity {
             while (mCursor.moveToNext()) {
                 //获取图片的路径
                 String path = mCursor.getString(mCursor.getColumnIndex(MediaStore.Images.Media.DATA));
-                imagePathList.add("file:///" + path);
+                if (!path.endsWith(".gif") && !path.endsWith(".GIF"))
+                    imagePathList.add("file:///" + path);
             }
             mCursor.close();
             return imagePathList;

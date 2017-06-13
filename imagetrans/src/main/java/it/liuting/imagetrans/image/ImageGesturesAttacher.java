@@ -91,7 +91,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     public ImageGesturesAttacher(TransImageView imageView) {
         this.mImageView = imageView;
         //初始化下拉的边界值
-        pullCloseEdge = Util.dpToPx(200, imageView.getContext());
+        pullCloseEdge = Util.dpToPx(100, imageView.getContext());
         //设置旋转角度为0
         mBaseRotation = 0.0f;
         mImageView.setOnTouchListener(this);

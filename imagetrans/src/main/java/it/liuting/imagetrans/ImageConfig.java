@@ -22,6 +22,16 @@ public class ImageConfig {
 
     public void setView(View view) {
         Rect rect = new Rect();
+        if (view == null) {
+            int screenWidth = StaticParam.screenWidth;
+            int screenHeight = StaticParam.screenHeight;
+            rect.left = (int) (screenWidth * .5f);
+            rect.right = (int) (screenWidth * .5f);
+            rect.top = (int) (screenHeight * .5f);
+            rect.bottom = (int) (screenHeight * .5f);
+            imageRectF.set(rect);
+            return;
+        }
         int[] a = new int[2];
         view.getLocationInWindow(a);
         rect.left = a[0];

@@ -12,7 +12,7 @@ public class Util {
     private final static float[] mMatrixValues = new float[9];
 
     public static void checkZoomLevels(float minZoom, float midZoom,
-                                float maxZoom) {
+                                       float maxZoom) {
         if (minZoom >= midZoom) {
             throw new IllegalArgumentException(
                     "Minimum zoom has to be less than Medium zoom. Call setMinimumZoom() with a more appropriate value");
@@ -46,8 +46,19 @@ public class Util {
         return (int) (displayMetrics.density * dp);
     }
 
+    public static int getScreenWidth(Context context) {
+        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        return displayMetrics.widthPixels;
+    }
+
+    public static int getScreenHeight(Context context) {
+        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        return displayMetrics.heightPixels;
+    }
+
     /**
      * 获得 imageview 的显示矩形
+     *
      * @param imageView
      * @return
      */
