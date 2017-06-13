@@ -581,9 +581,8 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
 
     public Matrix getMinMatrix() {
         Matrix matrix = new Matrix();
-        matrix.set(mBaseMatrix);
-        mSuppMatrix.setScale(mMinScale, mMinScale);
-        matrix.postConcat(mSuppMatrix);
+        matrix.setScale(mMinScale,mMinScale);
+        matrix.preConcat(mBaseMatrix);
         return matrix;
     }
 

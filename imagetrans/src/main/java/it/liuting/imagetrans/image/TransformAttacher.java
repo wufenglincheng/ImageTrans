@@ -42,6 +42,7 @@ public class TransformAttacher {
     private TransImageView.OnCloseListener onCloseListener;
     private TransformAnimation originalOpenTransAnim;
     private boolean running = false;
+    private boolean runningOriginalTrans = false;
 
     public void setImageConfig(ImageConfig imageConfig) {
         this.mImageConfig = imageConfig;
@@ -203,17 +204,17 @@ public class TransformAttacher {
             public void onAnimationEnd(Animator animation) {
                 running = false;
                 mImageView.resetMatrix();
+                runningOriginalTrans = false;
             }
         });
-        //这里设置矩阵 是为了查看大图根据矩阵分块加载 的逻辑
-        mImageView.setImageMatrix(mImageView.getMinMatrix());
+        runningOriginalTrans = true;
         originalOpenTransAnim.start();
     }
 
     public void closeOriginalTransform() {
         currentState = STATE_ORIGINAL_CLOSE;
         running = true;
-        boolean runOpenFlag = (originalOpenTransAnim!=null && originalOpenTransAnim.isRunning());
+        boolean runOpenFlag = (originalOpenTransAnim != null && originalOpenTransAnim.isRunning());
         if (runOpenFlag) originalOpenTransAnim.cancel();
         RectF displayRect = Util.getDisplayRect(mImageView);
         //得到当前图像的显示矩形
@@ -235,8 +236,7 @@ public class TransformAttacher {
                 if (onCloseListener != null) onCloseListener.close();
             }
         });
-        //这里设置矩阵 是为了查看大图根据矩阵分块加载 的逻辑
-        mImageView.setImageMatrix(mImageView.getMinMatrix());
+        runningOriginalTrans = true;
         closeTrans.start();
     }
 
@@ -318,6 +318,9 @@ public class TransformAttacher {
         return matrix;
     }
 
+    public boolean isRunningOriginalTrans(){
+        return runningOriginalTrans;
+    }
     public boolean isRunning() {
         return running;
     }

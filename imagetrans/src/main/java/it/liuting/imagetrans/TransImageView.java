@@ -91,7 +91,8 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
     public void resetMatrix() {
         mGesturesAttacher.resetMatrix();
     }
-    public boolean isRunTransform(){
+
+    public boolean isRunTransform() {
         return mTransformAttacher.isRunning();
     }
 
@@ -106,6 +107,18 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
         } else {
             super.onDraw(canvas);
         }
+    }
+
+    /**
+     * 这里复写方法 是为了避免图片根据矩阵分块加载 导致动画过程中图片显示不完整
+     * @return
+     */
+    @Override
+    public Matrix getImageMatrix() {
+        if (mTransformAttacher.isRunningOriginalTrans()) {
+            return getMinMatrix();
+        }
+        return super.getImageMatrix();
     }
 
     @Override
