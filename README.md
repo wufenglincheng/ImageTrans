@@ -1,6 +1,6 @@
 # ImageTrans
 ### 一个仿微信的图片查看过渡动画demo </br>
-具体demo 请下载：[demo.apk](https://github.com/wufenglincheng/ImageTrans/blob/master/preview/app-debug.apk) 
+具体demo 请下载：[demo.apk](https://github.com/wufenglincheng/ImageTrans/blob/master/preview/app-debug.apk)</br>
 根据四种缩略图裁剪方式变形动画</br>
 </br>
 CENTER_CROP</br>
