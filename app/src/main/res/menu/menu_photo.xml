@@ -9,4 +9,9 @@
         android:id="@+id/action_net_album"
         android:title="网络图片"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_time_line"
+        android:title="时间线"
+        app:showAsAction="never" />
 </menu>

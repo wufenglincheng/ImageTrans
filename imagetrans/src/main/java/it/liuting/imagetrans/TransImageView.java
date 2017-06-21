@@ -6,13 +6,16 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.IntRange;
+import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.ImageView;
 
 import it.liuting.imagetrans.image.ImageGesturesAttacher;
 import it.liuting.imagetrans.image.TransformAttacher;
+import it.liuting.imagetrans.listener.ImageTransAdapter;
 import it.liuting.imagetrans.listener.OnPullCloseListener;
+import it.liuting.imagetrans.listener.OnTransformListener;
 
 /**
  * Created by liuting on 17/5/25.
@@ -23,6 +26,7 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
     private ImageGesturesAttacher mGesturesAttacher;
     private TransformAttacher mTransformAttacher;
     private ImageConfig mImageConfig;
+    private ImageTransAdapter mImageTransAdapter;
 
     public TransImageView(Context context) {
         this(context, null);
@@ -46,6 +50,12 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
         mGesturesAttacher.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (mImageTransAdapter != null) {
+                    if (!mImageTransAdapter.onImageClick()) {
+                        onClose();
+                    }
+                    return;
+                }
                 onClose();
             }
         });
@@ -111,6 +121,7 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
 
     /**
      * 这里复写方法 是为了避免图片根据矩阵分块加载 导致动画过程中图片显示不完整
+     *
      * @return
      */
     @Override
@@ -132,6 +143,20 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
     }
 
     @Override
+    public void onPull(float range) {
+        if (mImageTransAdapter != null) {
+            mImageTransAdapter.pullRange(range);
+        }
+    }
+
+    @Override
+    public void onCancel() {
+        if (mImageTransAdapter != null) {
+            mImageTransAdapter.pullCancel();
+        }
+    }
+
+    @Override
     public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
         // 在边界改变的时候更新矩阵
         if (null != mGesturesAttacher) {
@@ -146,6 +171,23 @@ public class TransImageView extends ImageView implements OnPullCloseListener, Vi
 
     public void setBackgroundAlpha(@IntRange(from = 0, to = 255) int alpha) {
         setBackgroundColor(Color.argb(alpha, 0, 0, 0));
+    }
+
+    public void setOpenTransformListener(OnTransformListener openTransformListener) {
+        mTransformAttacher.setOpenTransListener(openTransformListener);
+    }
+
+    public void setCloseTransformListener(OnTransformListener closeTransformListener) {
+        mTransformAttacher.setCloseTransListener(closeTransformListener);
+    }
+
+    public void setImageTransAdapter(final @Nullable ImageTransAdapter l) {
+        this.mImageTransAdapter = l;
+    }
+
+    @Override
+    public void setOnLongClickListener(@Nullable OnLongClickListener l) {
+        mGesturesAttacher.setOnLongClickListener(l);
     }
 
     public interface OnCloseListener {

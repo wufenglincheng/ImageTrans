@@ -1,11 +1,14 @@
 package com.demo.imagetransdemo;
 
 import android.app.Application;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.DisplayMetrics;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -105,5 +108,20 @@ public class MyApplication extends Application {
         for(File item : files){
             item.delete();
         }
+    }
+
+    public static String getFromAssets(Context context,String fileName){
+        try {
+            InputStreamReader inputReader = new InputStreamReader( context.getResources().getAssets().open(fileName) );
+            BufferedReader bufReader = new BufferedReader(inputReader);
+            String line="";
+            String Result="";
+            while((line = bufReader.readLine()) != null)
+                Result += line;
+            return Result;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 }

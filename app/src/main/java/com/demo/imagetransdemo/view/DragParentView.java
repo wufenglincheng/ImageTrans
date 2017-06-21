@@ -1,4 +1,4 @@
-package com.demo.imagetransdemo;
+package com.demo.imagetransdemo.view;
 
 import android.content.Context;
 import android.graphics.Canvas;

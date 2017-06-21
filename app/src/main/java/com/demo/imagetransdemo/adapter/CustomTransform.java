@@ -1,4 +1,4 @@
-package com.demo.imagetransdemo;
+package com.demo.imagetransdemo.adapter;
 
 import android.content.Context;
 import android.graphics.Bitmap;

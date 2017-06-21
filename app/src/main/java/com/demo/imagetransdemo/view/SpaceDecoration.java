@@ -1,4 +1,4 @@
-package com.demo.imagetransdemo;
+package com.demo.imagetransdemo.view;
 
 import android.graphics.Rect;
 import android.support.v7.widget.GridLayoutManager;

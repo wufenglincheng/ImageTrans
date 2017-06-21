@@ -7,6 +7,7 @@ package it.liuting.imagetrans.evaluator;
 import android.animation.TypeEvaluator;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.util.Log;
 
 /**
  * This evaluator can be used to perform type interpolation between <code>Rect</code> values.
@@ -48,7 +49,7 @@ public class RectFEvaluator implements TypeEvaluator<RectF> {
      * between the start and end values. The calculation is a simple parametric
      * calculation on each of the separate components in the Rect objects
      * (left, top, right, and bottom).
-     *
+     * <p>
      * <p>If {@link #RectFEvaluator(RectF)} was used to construct
      * this RectEvaluator, the object returned will be the <code>reuseRect</code>
      * passed into the constructor.</p>
@@ -57,7 +58,7 @@ public class RectFEvaluator implements TypeEvaluator<RectF> {
      * @param startValue The start Rect
      * @param endValue   The end Rect
      * @return A linear interpolation between the start and end values, given the
-     *         <code>fraction</code> parameter.
+     * <code>fraction</code> parameter.
      */
     @Override
     public RectF evaluate(float fraction, RectF startValue, RectF endValue) {

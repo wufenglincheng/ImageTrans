@@ -1,4 +1,4 @@
-package com.demo.imagetransdemo;
+package com.demo.imagetransdemo.activity;
 
 import android.app.Activity;
 import android.content.ContentResolver;
@@ -12,6 +12,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -20,6 +21,11 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+import com.demo.imagetransdemo.adapter.CustomTransform;
+import com.demo.imagetransdemo.MyApplication;
+import com.demo.imagetransdemo.adapter.MyImageLoad;
+import com.demo.imagetransdemo.R;
+import com.demo.imagetransdemo.view.SpaceDecoration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +39,7 @@ import it.liuting.imagetrans.listener.SourceImageViewParam;
  */
 
 public class PhotoAlbumActivity extends AppCompatActivity {
+    private Toolbar toolbar;
     private RecyclerView recyclerView;
 
     private PhotoAlbumAdapter adapter;
@@ -44,6 +51,8 @@ public class PhotoAlbumActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photo_album);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
         recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
         recyclerView.addItemDecoration(new SpaceDecoration(10));

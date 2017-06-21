@@ -1,12 +1,12 @@
-package com.demo.imagetransdemo;
+package com.demo.imagetransdemo.activity;
 
-import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -15,6 +15,12 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+import com.demo.imagetransdemo.adapter.CustomTransform;
+import com.demo.imagetransdemo.MyApplication;
+import com.demo.imagetransdemo.adapter.MyImageLoad;
+import com.demo.imagetransdemo.adapter.MyImageTransAdapter;
+import com.demo.imagetransdemo.R;
+import com.demo.imagetransdemo.view.SpaceDecoration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,6 +45,7 @@ public class NetImageActivity extends AppCompatActivity {
             "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1496996959&di=13c094ba73675a24df2ad1d2c730c02c&imgtype=jpg&er=1&src=http%3A%2F%2Fdasouji.com%2Fwp-content%2Fuploads%2F2015%2F07%2F%25E9%2595%25BF%25E8%258A%25B1%25E5%259B%25BE-6.jpg"
     };
 
+    private Toolbar toolbar;
     private RecyclerView recyclerView;
 
     private PhotoAlbumAdapter adapter;
@@ -50,6 +57,8 @@ public class NetImageActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_photo_album);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
         recyclerView.setLayoutManager(new GridLayoutManager(this, 3));
         recyclerView.addItemDecoration(new SpaceDecoration(10));
@@ -118,7 +127,7 @@ public class NetImageActivity extends AppCompatActivity {
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    ImageTrans.with((Activity) context)
+                    ImageTrans.with(context)
                             .setImageList(images)
                             .setSourceImageViewParam(new SourceImageViewParam() {
                                 @Override
@@ -136,6 +145,7 @@ public class NetImageActivity extends AppCompatActivity {
                             })
                             .setImageLoad(new MyImageLoad())
                             .setNowIndex(position)
+                            .setAdapter(new MyImageTransAdapter())
                             .show();
                 }
             });

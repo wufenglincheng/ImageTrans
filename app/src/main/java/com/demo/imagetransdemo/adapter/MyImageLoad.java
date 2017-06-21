@@ -1,10 +1,11 @@
-package com.demo.imagetransdemo;
+package com.demo.imagetransdemo.adapter;
 
 import android.content.ContentResolver;
 import android.net.Uri;
 import android.util.Log;
 import android.widget.ImageView;
 
+import com.demo.imagetransdemo.TileBitmapDrawable;
 import com.demo.imagetransdemo.imageload.OkHttpImageLoad;
 
 import java.util.regex.Pattern;
@@ -100,6 +101,12 @@ public class MyImageLoad implements ImageLoad {
     @Override
     public void destroy() {
         TileBitmapDrawable.clearCache();
+    }
+
+    @Override
+    public void cancel(String url) {
+        if (!isCache(url))
+            OkHttpImageLoad.cancel(url);
     }
 
     private static boolean isNetUri(String url) {

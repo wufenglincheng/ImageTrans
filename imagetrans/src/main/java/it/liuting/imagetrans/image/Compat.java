@@ -16,9 +16,14 @@
 package it.liuting.imagetrans.image;
 
 import android.annotation.TargetApi;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.view.View;
+
+import java.lang.reflect.Field;
 
 class Compat {
 
@@ -35,5 +40,22 @@ class Compat {
     @TargetApi(16)
     private static void postOnAnimationJellyBean(View view, Runnable runnable) {
         view.postOnAnimation(runnable);
+    }
+    public static int getBackGroundAlpha(Drawable background){
+        int alpha;
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+            alpha = background.getAlpha();
+        } else {
+            Drawable.ConstantState state = background.getConstantState();
+            try {
+                Field field = state.getClass().getDeclaredField("mBaseColor");
+                field.setAccessible(true);
+                int color = (int) field.get(state);
+                alpha = Color.alpha(color);
+            } catch (Exception e) {
+                alpha = 0;
+            }
+        }
+        return alpha;
     }
 }

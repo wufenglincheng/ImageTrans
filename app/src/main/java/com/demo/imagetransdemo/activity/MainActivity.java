@@ -1,9 +1,10 @@
-package com.demo.imagetransdemo;
+package com.demo.imagetransdemo.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatSeekBar;
+import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -11,6 +12,12 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 
 import com.bumptech.glide.Glide;
+import com.demo.imagetransdemo.adapter.CustomTransform;
+import com.demo.imagetransdemo.MyApplication;
+import com.demo.imagetransdemo.adapter.MyImageLoad;
+import com.demo.imagetransdemo.adapter.MyImageTransAdapter;
+import com.demo.imagetransdemo.R;
+import com.demo.imagetransdemo.view.DragParentView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +28,7 @@ import it.liuting.imagetrans.listener.SourceImageViewParam;
 
 public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBarChangeListener {
     public static final int DEFAULT_MIN_SIZE = MyApplication.dpToPx(100);
+    Toolbar toolbar;
     DragParentView dragParentView;
     ImageView imageView;
     AppCompatSeekBar widthSeekBar;
@@ -33,6 +41,8 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         dragParentView = (DragParentView) findViewById(R.id.drag_parent_view);
         widthSeekBar = (AppCompatSeekBar) findViewById(R.id.seek_bar_width);
         heightSeekBar = (AppCompatSeekBar) findViewById(R.id.seek_bar_height);
@@ -89,6 +99,11 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                 startActivity(intent);
                 break;
             }
+            case R.id.action_time_line: {
+                Intent intent = new Intent(MainActivity.this, TimeLineActivity.class);
+                startActivity(intent);
+                break;
+            }
         }
         return true;
     }
@@ -120,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                 if (imageView != null)
                     loadImage();
             }
-        },300);
+        }, 300);
     }
 
     public void clickToScaleType(View view) {
@@ -146,4 +161,5 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                 .transform(new CustomTransform(this, scaleType))
                 .into(imageView);
     }
+
 }

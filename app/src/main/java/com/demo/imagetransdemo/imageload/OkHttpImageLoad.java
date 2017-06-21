@@ -55,18 +55,16 @@ public class OkHttpImageLoad {
         return mPlatform.defaultCallbackExecutor();
     }
 
-    public static void cancel(String key, int id) {
+    public static void cancel(String key) {
         if (null == mInstance) {
-            if (BuildConfig.DEBUG)
-                throw new IllegalArgumentException(" cancel() must be called before calling build() ");
-            else return;
+            return;
         }
-        Builder builder = mInstance.map.get(key + id);
+        Builder builder = mInstance.map.get(key);
         if (null != builder) {
             builder.cancel();
             builder.removeAllListener();
             try {
-                mInstance.map.remove(key + id);
+                mInstance.map.remove(key);
             } catch (Throwable e) {
 
             }

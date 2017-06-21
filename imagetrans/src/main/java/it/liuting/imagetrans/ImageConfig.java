@@ -20,11 +20,11 @@ public class ImageConfig {
     public ScaleType scaleType = ScaleType.CENTER_CROP;
     public WeakReference<Drawable> thumbnailWeakRefe;
 
-    public void setView(View view) {
+    public void setView(View view, ImageTransParam imageTransParam) {
         Rect rect = new Rect();
         if (view == null) {
-            int screenWidth = StaticParam.screenWidth;
-            int screenHeight = StaticParam.screenHeight;
+            int screenWidth = imageTransParam.screenWidth;
+            int screenHeight = imageTransParam.screenHeight;
             rect.left = (int) (screenWidth * .5f);
             rect.right = (int) (screenWidth * .5f);
             rect.top = (int) (screenHeight * .5f);

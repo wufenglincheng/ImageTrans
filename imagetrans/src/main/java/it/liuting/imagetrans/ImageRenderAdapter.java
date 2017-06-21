@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import it.liuting.imagetrans.listener.ImageLoad;
+import it.liuting.imagetrans.listener.SimpleTransformListener;
 
 
 /**
@@ -16,47 +17,68 @@ import it.liuting.imagetrans.listener.ImageLoad;
  * image 页面的渲染类
  */
 
-public class ImageRenderAdapter implements ImageLoad.LoadCallback {
+public class ImageRenderAdapter extends SimpleTransformListener implements ImageLoad.LoadCallback {
     private String imageUrl;
     private TransImageView imageView;
     private RingLoadingView loadingView;
     private int position;
-    private boolean hasPreview = false;
+    private boolean isRunImageTrans = false;
+    private ImageTransParam mImageTransParam;
 
-    public ImageRenderAdapter(String image) {
+    public ImageRenderAdapter(String image, ImageTransParam imageTransParam) {
         this.imageUrl = image;
+        this.mImageTransParam = imageTransParam;
     }
 
     public void renderView(FrameLayout parent, int position, TransImageView.OnCloseListener listener) {
         this.position = position;
+        //添加imageView
         imageView = new TransImageView(parent.getContext());
-        loadingView = new RingLoadingView(parent.getContext());
         parent.addView(imageView, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        //添加 loading view
+        loadingView = new RingLoadingView(parent.getContext());
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(Util.dpToPx(48, parent.getContext()), Util.dpToPx(48, parent.getContext()));
         layoutParams.gravity = Gravity.CENTER;
-        parent.addView(loadingView, layoutParams);
-        imageView.setImageConfig(StaticParam.getImageConfig(position));
         loadingView.setVisibility(View.GONE);
-        if (!StaticParam.isCached(imageUrl)) {
+        parent.addView(loadingView, layoutParams);
+        //初始化imageview参数
+        imageView.setOnCloseListener(listener);
+        imageView.setOpenTransformListener(this);
+        imageView.setCloseTransformListener(this);
+        if (mImageTransParam.hasAdapter()) {
+            imageView.setImageTransAdapter(mImageTransParam.getAdapter());
+            imageView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    mImageTransParam.getAdapter().onImageLongClick();
+                    return false;
+                }
+            });
+        }
+
+        imageView.setImageConfig(mImageTransParam.getImageConfig(position));
+        if (!mImageTransParam.isCached(imageUrl)) {
             //有预览图
-            hasPreview = true;
+            isRunImageTrans = true;
             loadingView.setVisibility(View.VISIBLE);
-            if (StaticParam.isClickIndex(position) && StaticParam.isFirstCheckClickIndex()) {
+            if (mImageTransParam.isFirstStartOfIndex(position)) {
                 imageView.showThumbWithTransform();
             } else {
                 imageView.showThumb();
             }
         } else {
-            if (StaticParam.isClickIndex(position) && StaticParam.isFirstCheckClickIndex()) {
-                hasPreview = true;
+            if (mImageTransParam.isFirstStartOfIndex(position)) {
+                isRunImageTrans = true;
             } else {
                 imageView.setBackgroundAlpha(255);
             }
         }
-        imageView.setOnCloseListener(listener);
-        StaticParam.loadImage(imageUrl, ImageRenderAdapter.this, imageView);
+        mImageTransParam.loadImage(imageUrl, ImageRenderAdapter.this, imageView);
     }
 
+    /**
+     * 执行关闭动画
+     */
     public void runClose() {
         imageView.onClose();
     }
@@ -78,12 +100,22 @@ public class ImageRenderAdapter implements ImageLoad.LoadCallback {
     @Override
     public void loadFinish(final Drawable drawable) {
         loadingView.setVisibility(View.GONE);
-        if (StaticParam.isNowIndex(position) && hasPreview)
+        if (mImageTransParam.isNowIndex(position) && isRunImageTrans)
             imageView.setImageWithTransform(drawable);
         else imageView.setImage(drawable);
     }
 
     public void destroy() {
+        mImageTransParam.cancel(imageUrl);
+    }
 
+    @Override
+    public void transformEnd() {
+        mImageTransParam.showAttachView(position);
+    }
+
+    @Override
+    public void transformStart() {
+        mImageTransParam.startDismiss();
     }
 }

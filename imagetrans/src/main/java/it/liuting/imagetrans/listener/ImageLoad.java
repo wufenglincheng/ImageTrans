@@ -33,6 +33,8 @@ public interface ImageLoad {
      */
     void destroy();
 
+    void cancel(String url);
+
     /**
      * 图片加载器中用来回传下载好的图片
      */

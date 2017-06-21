@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -13,6 +14,8 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.ImageView;
 import android.widget.OverScroller;
+
+import java.lang.reflect.Field;
 
 import it.liuting.imagetrans.TransImageView;
 import it.liuting.imagetrans.Util;
@@ -518,6 +521,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
                 float preScale = 1 - getValue(mSuppMatrix, Matrix.MSCALE_X);//得到上一次的scale
                 float minProgress = centerY / 5;//下拉进度的单位距离
                 float factor = Math.abs(mCurrentY - centerY) / minProgress * 0.1f;//下拉scale进度
+                mOnPullCloseListener.onPull(factor > 1 ? 1 : factor);
                 if (factor > 1 - gestureMinScale) {
                     factor = 1 - gestureMinScale;
                 }
@@ -544,6 +548,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
         if (factor >= 1) {
             if (mOnPullCloseListener != null) mOnPullCloseListener.onClose();
         } else {
+            if (mOnPullCloseListener != null) mOnPullCloseListener.onCancel();
             isPullDownAction = false;
             RectF srcRect = new RectF(getDisplayRect(mDrawMatrix));
             RectF dstRect = new RectF(getDisplayRect(mBaseMatrix));
@@ -581,7 +586,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
 
     public Matrix getMinMatrix() {
         Matrix matrix = new Matrix();
-        matrix.setScale(mMinScale,mMinScale);
+        matrix.setScale(mMinScale, mMinScale);
         matrix.preConcat(mBaseMatrix);
         return matrix;
     }
@@ -780,7 +785,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
             this.dstRectF = dst;
             this.mStartScale = srcScale;
             this.mEndsScale = dstScale;
-            this.mStartAlpha = mImageView.getBackground().getAlpha();
+            this.mStartAlpha = Compat.getBackGroundAlpha(mImageView.getBackground());
             mStartTime = System.currentTimeMillis();
         }
 

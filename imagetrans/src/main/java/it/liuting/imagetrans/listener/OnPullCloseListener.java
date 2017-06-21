@@ -5,5 +5,10 @@ package it.liuting.imagetrans.listener;
  */
 
 public interface OnPullCloseListener {
+
     void onClose();
+
+    void onPull(float range);
+
+    void onCancel();
 }

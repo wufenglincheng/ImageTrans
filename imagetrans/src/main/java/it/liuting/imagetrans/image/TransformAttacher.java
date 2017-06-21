@@ -1,6 +1,5 @@
 package it.liuting.imagetrans.image;
 
-import android.animation.Animator;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.RectF;
@@ -13,7 +12,8 @@ import it.liuting.imagetrans.TransImageView;
 import it.liuting.imagetrans.Util;
 import it.liuting.imagetrans.evaluator.MatrixEvaluator;
 import it.liuting.imagetrans.evaluator.RectFEvaluator;
-import it.liuting.imagetrans.listener.SimpleAnimListener;
+import it.liuting.imagetrans.listener.OnTransformListener;
+import it.liuting.imagetrans.listener.SimpleTransformListener;
 
 /**
  * Created by liuting on 17/6/6.
@@ -29,8 +29,8 @@ public class TransformAttacher {
     private final static int STATE_ORIGINAL_CLOSE = 5;
     protected TransImageView mImageView;
     protected ImageConfig mImageConfig;
-    protected Matrix transformMatrix = new Matrix();
     protected RectF transformRect = new RectF();
+    protected Matrix transformMatrix = new Matrix();
     private Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
     private int currentState = -1;
     private RectF thumbnailInitRect;
@@ -38,9 +38,11 @@ public class TransformAttacher {
     private Matrix thumbnailInitMatrix;
     private Matrix thumbnailEndMatrix;
     private TransformAnimation thumbnailOpenTransAnim;
-    private boolean showFlagAtLayoutChange;
-    private TransImageView.OnCloseListener onCloseListener;
     private TransformAnimation originalOpenTransAnim;
+    private TransImageView.OnCloseListener onCloseListener;
+    private OnTransformListener openTransListener;
+    private OnTransformListener closeTransListener;
+    private boolean showFlagAtLayoutChange;
     private boolean running = false;
     private boolean runningOriginalTrans = false;
 
@@ -147,6 +149,7 @@ public class TransformAttacher {
     private void _showThumbWithTransform() {
         initThumb();
         thumbnailOpenTransAnim = new TransformAnimation(thumbnailInitRect, thumbnailEndRect, thumbnailInitMatrix, thumbnailEndMatrix, 255);
+        thumbnailOpenTransAnim.setListener(openTransListener);
         thumbnailOpenTransAnim.start();
     }
 
@@ -154,9 +157,9 @@ public class TransformAttacher {
         currentState = STATE_THUMBNAIL_CLOSE;
         if (thumbnailOpenTransAnim != null) thumbnailOpenTransAnim.cancel();
         TransformAnimation thumbCloseTransAnim = new TransformAnimation(new RectF(transformRect), thumbnailInitRect, new Matrix(transformMatrix), thumbnailInitMatrix, 0);
-        thumbCloseTransAnim.setListener(new SimpleAnimListener() {
+        thumbCloseTransAnim.setListener(new SimpleTransformListener() {
             @Override
-            public void onAnimationEnd(Animator animation) {
+            public void transformEnd() {
                 if (onCloseListener != null) onCloseListener.close();
             }
         });
@@ -199,12 +202,13 @@ public class TransformAttacher {
         Matrix initMatrix = getOriginalMatrix(initRect, drawableWidth, drawableHeight, 1f);
         finalRect(endRect);
         originalOpenTransAnim = new TransformAnimation(initRect, endRect, initMatrix, endMatrix, 255);
-        originalOpenTransAnim.setListener(new SimpleAnimListener() {
+        originalOpenTransAnim.setListener(new SimpleTransformListener() {
             @Override
-            public void onAnimationEnd(Animator animation) {
+            public void transformEnd() {
                 running = false;
                 mImageView.resetMatrix();
                 runningOriginalTrans = false;
+                if (openTransListener != null) openTransListener.transformEnd();
             }
         });
         runningOriginalTrans = true;
@@ -212,6 +216,10 @@ public class TransformAttacher {
     }
 
     public void closeOriginalTransform() {
+        if (mImageView.getDrawable() == null) {
+            if (onCloseListener != null) onCloseListener.close();
+            return;
+        }
         currentState = STATE_ORIGINAL_CLOSE;
         running = true;
         boolean runOpenFlag = (originalOpenTransAnim != null && originalOpenTransAnim.isRunning());
@@ -230,9 +238,9 @@ public class TransformAttacher {
         Matrix endMatrix = getOriginalMatrix(endRect, displayRect.width(), displayRect.height(), Util.getValue(displayMatrix, Matrix.MSCALE_X));
         finalRect(initRect);
         TransformAnimation closeTrans = new TransformAnimation(initRect, endRect, initMatrix, endMatrix, 0);
-        closeTrans.setListener(new SimpleAnimListener() {
+        closeTrans.setListener(new SimpleTransformListener() {
             @Override
-            public void onAnimationEnd(Animator animation) {
+            public void transformEnd() {
                 if (onCloseListener != null) onCloseListener.close();
             }
         });
@@ -318,9 +326,10 @@ public class TransformAttacher {
         return matrix;
     }
 
-    public boolean isRunningOriginalTrans(){
+    public boolean isRunningOriginalTrans() {
         return runningOriginalTrans;
     }
+
     public boolean isRunning() {
         return running;
     }
@@ -361,6 +370,7 @@ public class TransformAttacher {
     }
 
     public void runCloseTransform() {
+        if (closeTransListener != null) closeTransListener.transformStart();
         switch (currentState) {
             case STATE_THUMBNAIL_OPEN:
             case STATE_THUMBNAIL_OPEN_TRANS:
@@ -380,6 +390,14 @@ public class TransformAttacher {
         this.onCloseListener = onCloseListener;
     }
 
+    public void setOpenTransListener(OnTransformListener openTransListener) {
+        this.openTransListener = openTransListener;
+    }
+
+    public void setCloseTransListener(OnTransformListener closeTransListener) {
+        this.closeTransListener = closeTransListener;
+    }
+
     public void pause() {
         running = false;
     }
@@ -397,7 +415,7 @@ public class TransformAttacher {
         private final long mStartTime;
         private RectFEvaluator rectFEvaluator;
         private MatrixEvaluator matrixEvaluator;
-        private SimpleAnimListener listener;
+        private OnTransformListener listener;
         protected boolean isRunning = false;
 
         public TransformAnimation(RectF src, RectF dst, Matrix srcMatrix, Matrix dstMatrix, int endAlpha) {
@@ -406,13 +424,13 @@ public class TransformAttacher {
             this.srcMatrix = srcMatrix;
             this.dstMatrix = dstMatrix;
             this.mEndAlpha = endAlpha;
-            this.mStartAlpha = mImageView.getBackground().getAlpha();
+            mStartAlpha = Compat.getBackGroundAlpha(mImageView.getBackground());
             mStartTime = System.currentTimeMillis();
             rectFEvaluator = new RectFEvaluator(transformRect);
             matrixEvaluator = new MatrixEvaluator(transformMatrix);
         }
 
-        public void setListener(SimpleAnimListener listener) {
+        public void setListener(OnTransformListener listener) {
             this.listener = listener;
         }
 
@@ -430,7 +448,7 @@ public class TransformAttacher {
                 Compat.postOnAnimation(mImageView, this);
             } else {
                 isRunning = false;
-                if (listener != null) listener.onAnimationEnd(null);
+                if (listener != null) listener.transformEnd();
             }
         }
 
