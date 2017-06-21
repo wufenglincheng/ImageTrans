@@ -2,7 +2,6 @@ package it.liuting.imagetrans;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.os.Build;
 import android.support.v7.app.AlertDialog;
 import android.view.KeyEvent;
 
@@ -60,7 +59,7 @@ public class ImageTrans implements TransImageView.OnCloseListener, DialogInterfa
     }
 
     private void createView() {
-        mDialogRootLayout = new DialogRootLayout(mContext, mImageTransParam,this);
+        mDialogRootLayout = new DialogRootLayout(mContext, mImageTransParam, this);
         mDialogRootLayout.setOnCloseListener(this);
     }
 
