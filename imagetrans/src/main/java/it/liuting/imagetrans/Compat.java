@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package it.liuting.imagetrans.image;
+package it.liuting.imagetrans;
 
 import android.annotation.TargetApi;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.view.View;
@@ -41,9 +40,10 @@ class Compat {
     private static void postOnAnimationJellyBean(View view, Runnable runnable) {
         view.postOnAnimation(runnable);
     }
-    public static int getBackGroundAlpha(Drawable background){
+
+    public static int getBackGroundAlpha(Drawable background) {
         int alpha;
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+        if (VERSION.SDK_INT > VERSION_CODES.KITKAT) {
             alpha = background.getAlpha();
         } else {
             Drawable.ConstantState state = background.getConstantState();

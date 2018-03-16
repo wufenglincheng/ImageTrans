@@ -28,7 +28,6 @@ public class MatrixEvaluator implements TypeEvaluator<Matrix> {
             mTempEndValues[i] = mTempStartValues[i] + (fraction * diff);
         }
         mTempMatrix.setValues(mTempEndValues);
-
         return mTempMatrix;
     }
 }

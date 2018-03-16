@@ -15,11 +15,11 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
-import com.demo.imagetransdemo.adapter.CustomTransform;
 import com.demo.imagetransdemo.MyApplication;
+import com.demo.imagetransdemo.R;
+import com.demo.imagetransdemo.adapter.CustomTransform;
 import com.demo.imagetransdemo.adapter.MyImageLoad;
 import com.demo.imagetransdemo.adapter.MyImageTransAdapter;
-import com.demo.imagetransdemo.R;
 import com.demo.imagetransdemo.view.SpaceDecoration;
 
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
-import it.liuting.imagetrans.listener.SourceImageViewParam;
+import it.liuting.imagetrans.listener.SourceImageViewGet;
 
 /**
  * Created by liuting on 17/6/1.
@@ -129,18 +129,13 @@ public class NetImageActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     ImageTrans.with(context)
                             .setImageList(images)
-                            .setSourceImageViewParam(new SourceImageViewParam() {
+                            .setSourceImageView(new SourceImageViewGet() {
                                 @Override
-                                public View getSourceView(int pos) {
+                                public ImageView getImageView(int pos) {
                                     int layoutPos = recyclerView.indexOfChild(holder.itemView);
                                     View view = recyclerView.getChildAt(layoutPos + pos - position);
-                                    if (view != null) return view;
-                                    return holder.itemView;
-                                }
-
-                                @Override
-                                public ScaleType getScaleType(int position) {
-                                    return scaleType;
+                                    if (view != null) return (ImageView) view;
+                                    return (ImageView) holder.itemView;
                                 }
                             })
                             .setImageLoad(new MyImageLoad())

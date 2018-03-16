@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package it.liuting.imagetrans.image;
+package it.liuting.imagetrans;
 
 import android.content.Context;
 import android.view.MotionEvent;
@@ -21,8 +21,8 @@ import android.view.ScaleGestureDetector;
 import android.view.VelocityTracker;
 import android.view.ViewConfiguration;
 
-import it.liuting.imagetrans.Util;
 import it.liuting.imagetrans.listener.OnGestureListener;
+
 
 /**
  * Does a whole lot of gesture detecting.
@@ -190,7 +190,7 @@ class CustomGestureDetector {
                 }
                 break;
             case MotionEvent.ACTION_POINTER_UP:
-                final int pointerIndex = Util.getPointerIndex(ev.getAction());
+                final int pointerIndex = getPointerIndex(ev.getAction());
                 final int pointerId = ev.getPointerId(pointerIndex);
                 if (pointerId == mActivePointerId) {
                     // This was our active pointer going up. Choose a new
@@ -207,5 +207,9 @@ class CustomGestureDetector {
                 .findPointerIndex(mActivePointerId != INVALID_POINTER_ID ? mActivePointerId
                         : 0);
         return true;
+    }
+
+    public static int getPointerIndex(int action) {
+        return (action & MotionEvent.ACTION_POINTER_INDEX_MASK) >> MotionEvent.ACTION_POINTER_INDEX_SHIFT;
     }
 }

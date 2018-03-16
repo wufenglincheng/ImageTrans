@@ -1,11 +1,11 @@
-package it.liuting.imagetrans.image;
+package it.liuting.imagetrans;
 
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
+import android.support.annotation.NonNull;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -15,10 +15,6 @@ import android.view.animation.Interpolator;
 import android.widget.ImageView;
 import android.widget.OverScroller;
 
-import java.lang.reflect.Field;
-
-import it.liuting.imagetrans.TransImageView;
-import it.liuting.imagetrans.Util;
 import it.liuting.imagetrans.listener.OnGestureListener;
 import it.liuting.imagetrans.listener.OnPullCloseListener;
 
@@ -28,8 +24,7 @@ import it.liuting.imagetrans.listener.OnPullCloseListener;
  * 基于PhotoView修改，增加的下拉拖动关闭手势
  */
 
-public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureListener {
-    private static final float DEFAULT_READMODE_SCALE = 2.0f;
+class ImageGesturesAttacher implements View.OnTouchListener, OnGestureListener {
     //默认最大缩放比例
     private static float DEFAULT_MAX_SCALE = 3.0f;
     //默认中等缩放比例
@@ -53,10 +48,6 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     private int mAnimDuration = DEFAULT_ANIM_DURATION;
     //动画时间插值器
     private Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
-    //阅读模式的判定比例，用于判断是否是长图
-    private float readModeScale = DEFAULT_READMODE_SCALE;
-    //阅读模式（长图的默认适宽显示）
-    private boolean isReadMode = true;
     //是否是长图
     private boolean isLongImage = false;
     //图像显示的基础矩阵
@@ -90,6 +81,8 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     private OnPullCloseListener mOnPullCloseListener;
     //快速滑动的动画
     private FlingRunnable mCurrentFlingRunnable;
+    private ITConfig itConfig;
+    private boolean mAllowInterceptOnTouch = false;
 
     public ImageGesturesAttacher(TransImageView imageView) {
         this.mImageView = imageView;
@@ -146,14 +139,28 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
         });
     }
 
+    public void settingConfig(@NonNull ITConfig itConfig) {
+        this.itConfig = itConfig;
+    }
+
     /**
      * 更新drawable的默认显示矩阵
      */
-    public void update() {
+    public void update(Drawable drawable, boolean show) {
         // 根据当前的drawable更新显示矩阵
-        updateBaseMatrix(mImageView.getDrawable());
+        updateBaseMatrix(drawable);
         // 重置矩阵
-        resetMatrix();
+        resetSuppMatrix();
+        if (show) {
+            setRotationBy(mBaseRotation);
+            setImageViewMatrix(getDrawMatrix());
+            checkMatrixBounds();
+        }
+    }
+
+    public void update() {
+        if (mImageView.getDrawable() != null)
+            update(mImageView.getDrawable(), true);
     }
 
     /**
@@ -174,7 +181,6 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
         if (isLongImage) {
             mSuppMatrix.setScale(getMediumScale(), getMediumScale());
         }
-
     }
 
     /**
@@ -240,11 +246,11 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
                     break;
             }
         }
-        if (isReadMode) {
+        if (itConfig.isReadMode) {
             //是在阅读模式下
             float maxScale = Math.max(widthScale, heightScale);
             //判断是否是竖长图
-            if (maxScale * drawableHeight > readModeScale * viewHeight) {
+            if (maxScale * drawableHeight > itConfig.readModeRule * viewHeight) {
                 isLongImage = true;
                 mMinScale = 1f;
                 //设置中等缩放为适宽的缩放
@@ -261,7 +267,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
      * @return RectF - 占用的矩阵区域
      */
     private RectF getDisplayRect(Matrix matrix) {
-        Drawable d = mImageView.getDrawable();
+        Drawable d = mImageView.getImageDrawable();
         if (d != null) {
             mDisplayRect.set(0, 0, d.getIntrinsicWidth(),
                     d.getIntrinsicHeight());
@@ -276,8 +282,8 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
      *
      * @return
      */
-    public RectF getDisplayRect() {
-        checkMatrixBounds();
+    public RectF getDisplayRect(boolean checkBounds) {
+        if (checkBounds) checkMatrixBounds();
         return getDisplayRect(getDrawMatrix());
     }
 
@@ -356,7 +362,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
      *
      * @return 最终显示的矩阵
      */
-    private Matrix getDrawMatrix() {
+    public Matrix getDrawMatrix() {
         mDrawMatrix.set(mBaseMatrix);
         mDrawMatrix.postConcat(mSuppMatrix);
         return mDrawMatrix;
@@ -392,7 +398,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     public boolean onTouch(View v, MotionEvent event) {
         boolean handled = false;
 
-        if (!mImageView.isRunTransform() && Util.hasDrawable((ImageView) v)) {
+        if (!mAllowInterceptOnTouch && Util.hasDrawable((ImageView) v)) {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     ViewParent parent = v.getParent();
@@ -411,7 +417,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
                         checkPullClose();
                     } else if (getScale() < mMinScale) {
                         // 如果当前scale 小于最小scale 则开始缩放动画返回minScale
-                        RectF rect = getDisplayRect();
+                        RectF rect = getDisplayRect(true);
                         if (rect != null) {
                             v.post(new AnimatedZoomRunnable(getScale(), mMinScale,
                                     rect.centerX(), rect.centerY()));
@@ -442,6 +448,9 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
         return handled;
     }
 
+    public void requestDisallowInterceptTouchEvent(boolean allow) {
+        mAllowInterceptOnTouch = allow;
+    }
 
     @Override
     public void onDrag(float dx, float dy) {
@@ -521,7 +530,8 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
                 float preScale = 1 - getValue(mSuppMatrix, Matrix.MSCALE_X);//得到上一次的scale
                 float minProgress = centerY / 5;//下拉进度的单位距离
                 float factor = Math.abs(mCurrentY - centerY) / minProgress * 0.1f;//下拉scale进度
-                mOnPullCloseListener.onPull(factor > 1 ? 1 : factor);
+                if (mOnPullCloseListener != null)
+                    mOnPullCloseListener.onPull(factor > 1 ? 1 : factor);
                 if (factor > 1 - gestureMinScale) {
                     factor = 1 - gestureMinScale;
                 }
@@ -644,7 +654,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     public void setScaleType(ImageView.ScaleType scaleType) {
         if (Util.isSupportedScaleType(scaleType) && scaleType != mScaleType) {
             mScaleType = scaleType;
-            update();
+            update(mImageView.getDrawable(), true);
         }
     }
 
@@ -660,6 +670,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
     public void setOnPullCloseListener(OnPullCloseListener listener) {
         mOnPullCloseListener = listener;
     }
+
     /************listener end*****************/
 
     /*******************动画集合*********************/
@@ -716,7 +727,7 @@ public class ImageGesturesAttacher implements View.OnTouchListener, OnGestureLis
 
         public void fling(int viewWidth, int viewHeight, int velocityX,
                           int velocityY) {
-            final RectF rect = getDisplayRect();
+            final RectF rect = getDisplayRect(true);
             if (rect == null) {
                 return;
             }

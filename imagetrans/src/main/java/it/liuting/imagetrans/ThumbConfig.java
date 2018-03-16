@@ -1,30 +1,34 @@
 package it.liuting.imagetrans;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.support.annotation.Nullable;
 import android.view.View;
 import android.widget.ImageView;
 
 import java.lang.ref.WeakReference;
 
 /**
- * Created by liuting on 17/5/27.
+ * Created by liuting on 18/3/13.
  */
 
-public class ImageConfig {
+class ThumbConfig {
 
-    public RectF imageRectF = new RectF();
-    public ScaleType scaleType = ScaleType.CENTER_CROP;
-    public WeakReference<Drawable> thumbnailWeakRefe;
+    final RectF imageRectF = new RectF();
+    ScaleType scaleType = ScaleType.CENTER_CROP;
+    WeakReference<Drawable> thumbnailWeakRefe;
 
-    public void setView(View view, ImageTransParam imageTransParam) {
+    ThumbConfig(@Nullable View view, Resources resources, ScaleType scaleType) {
+        this.scaleType = scaleType;
+        int screenWidth = resources.getDisplayMetrics().widthPixels;
+        int screenHeight = resources.getDisplayMetrics().heightPixels;
         Rect rect = new Rect();
         if (view == null) {
-            int screenWidth = imageTransParam.screenWidth;
-            int screenHeight = imageTransParam.screenHeight;
+            //如果view为空,则定义从中心点放大图片
             rect.left = (int) (screenWidth * .5f);
             rect.right = (int) (screenWidth * .5f);
             rect.top = (int) (screenHeight * .5f);
@@ -48,11 +52,7 @@ public class ImageConfig {
         }
     }
 
-    public void setScaleType(ScaleType scaleType) {
-        this.scaleType = scaleType;
-    }
-
-    public static int getStatesBarHeight(Context context) {
+    static int getStatesBarHeight(Context context) {
         int resourceId = context.getResources()
                 .getIdentifier("status_bar_height",
                         "dimen", "android");

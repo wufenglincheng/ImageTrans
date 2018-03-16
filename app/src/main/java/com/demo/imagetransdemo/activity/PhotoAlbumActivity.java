@@ -1,6 +1,5 @@
 package com.demo.imagetransdemo.activity;
 
-import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
@@ -21,10 +20,10 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
-import com.demo.imagetransdemo.adapter.CustomTransform;
 import com.demo.imagetransdemo.MyApplication;
-import com.demo.imagetransdemo.adapter.MyImageLoad;
 import com.demo.imagetransdemo.R;
+import com.demo.imagetransdemo.adapter.CustomTransform;
+import com.demo.imagetransdemo.adapter.MyImageLoad;
 import com.demo.imagetransdemo.view.SpaceDecoration;
 
 import java.util.ArrayList;
@@ -32,7 +31,7 @@ import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
-import it.liuting.imagetrans.listener.SourceImageViewParam;
+import it.liuting.imagetrans.listener.SourceImageViewGet;
 
 /**
  * Created by liuting on 17/6/1.
@@ -118,23 +117,19 @@ public class PhotoAlbumActivity extends AppCompatActivity {
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    ImageTrans.with((Activity) context)
+                    ImageTrans.with(context)
                             .setImageList(images)
-                            .setSourceImageViewParam(new SourceImageViewParam() {
+                            .setSourceImageView(new SourceImageViewGet() {
                                 @Override
-                                public View getSourceView(int pos) {
+                                public ImageView getImageView(int pos) {
                                     int layoutPos = recyclerView.indexOfChild(holder.itemView);
                                     int viewPos = layoutPos + pos - position;
                                     View view = recyclerView.getChildAt(viewPos);
-                                    if (view != null) return view;
+                                    if (view != null) return (ImageView) view;
                                     return null;
                                 }
-
-                                @Override
-                                public ScaleType getScaleType(int position) {
-                                    return scaleType;
-                                }
                             })
+                            .setScaleType(scaleType)
                             .setImageLoad(new MyImageLoad())
                             .setNowIndex(position)
                             .show();

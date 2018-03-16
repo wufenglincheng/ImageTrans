@@ -5,14 +5,13 @@ import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
-import android.view.MotionEvent;
 import android.widget.ImageView;
 
-public class Util {
+class Util {
     private final static float[] mMatrixValues = new float[9];
 
-    public static void checkZoomLevels(float minZoom, float midZoom,
-                                       float maxZoom) {
+    static void checkZoomLevels(float minZoom, float midZoom,
+                                float maxZoom) {
         if (minZoom >= midZoom) {
             throw new IllegalArgumentException(
                     "Minimum zoom has to be less than Medium zoom. Call setMinimumZoom() with a more appropriate value");
@@ -22,11 +21,11 @@ public class Util {
         }
     }
 
-    public static boolean hasDrawable(ImageView imageView) {
+    static boolean hasDrawable(ImageView imageView) {
         return imageView.getDrawable() != null;
     }
 
-    public static boolean isSupportedScaleType(final ImageView.ScaleType scaleType) {
+    static boolean isSupportedScaleType(final ImageView.ScaleType scaleType) {
         if (scaleType == null) {
             return false;
         }
@@ -37,23 +36,9 @@ public class Util {
         return true;
     }
 
-    public static int getPointerIndex(int action) {
-        return (action & MotionEvent.ACTION_POINTER_INDEX_MASK) >> MotionEvent.ACTION_POINTER_INDEX_SHIFT;
-    }
-
-    public static int dpToPx(int dp, Context context) {
+    static int dpToPx(int dp, Context context) {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
         return (int) (displayMetrics.density * dp);
-    }
-
-    public static int getScreenWidth(Context context) {
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-        return displayMetrics.widthPixels;
-    }
-
-    public static int getScreenHeight(Context context) {
-        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
-        return displayMetrics.heightPixels;
     }
 
     /**
@@ -62,7 +47,7 @@ public class Util {
      * @param imageView
      * @return
      */
-    public static RectF getDisplayRect(ImageView imageView) {
+    static RectF getDisplayRect(ImageView imageView) {
         Matrix matrix = imageView.getImageMatrix();
         Drawable d = imageView.getDrawable();
         RectF rectF = new RectF();
@@ -75,7 +60,7 @@ public class Util {
         return null;
     }
 
-    public static float getValue(Matrix matrix, int whichValue) {
+    static float getValue(Matrix matrix, int whichValue) {
         matrix.getValues(mMatrixValues);
         return mMatrixValues[whichValue];
     }

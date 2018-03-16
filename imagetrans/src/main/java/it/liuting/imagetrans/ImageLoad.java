@@ -1,39 +1,32 @@
-package it.liuting.imagetrans.listener;
+package it.liuting.imagetrans;
 
-import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.widget.ImageView;
 
 /**
- * Created by liuting on 17/6/1.
- * 加载图片的接口 为了自定义自己的图片加载器
+ * Created by liuting on 18/3/15.
  */
 
 public interface ImageLoad {
-
     /**
      * 加载图片
      *
      * @param url       图片的url
      * @param callback  回调 {@link LoadCallback}
      * @param imageView 加载图片的imageView
+     * @param uniqueStr    加载图片请求的唯一tag
      */
-    void loadImage(String url, LoadCallback callback, ImageView imageView);
+    void loadImage(String url, LoadCallback callback, ImageView imageView, String uniqueStr);
 
     /**
      * 判断当前图片是否有本地缓存，用来判断是否显示缩略图
      *
-     * @param url 图片地址
+     * @param url    图片地址
      * @return
      */
-    boolean isCache(String url);
+    boolean isCached(String url);
 
-    /**
-     * 用来通知图片预览界面销毁
-     */
-    void destroy();
-
-    void cancel(String url);
+    void cancel(String unique);
 
     /**
      * 图片加载器中用来回传下载好的图片
@@ -45,8 +38,6 @@ public interface ImageLoad {
          * @param progress
          */
         void progress(float progress);
-
-        void loadFinish(Bitmap bitmap);
 
         void loadFinish(Drawable drawable);
     }

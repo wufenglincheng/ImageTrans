@@ -7,7 +7,6 @@ package it.liuting.imagetrans.evaluator;
 import android.animation.TypeEvaluator;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.util.Log;
 
 /**
  * This evaluator can be used to perform type interpolation between <code>Rect</code> values.

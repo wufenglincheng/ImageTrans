@@ -14,12 +14,13 @@ import com.demo.imagetransdemo.ItemData;
 import com.demo.imagetransdemo.MyApplication;
 import com.demo.imagetransdemo.R;
 import com.demo.imagetransdemo.view.ItemDecorationAlbumColumns;
+import com.demo.imagetransdemo.view.RingLoadingView;
 
 import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
-import it.liuting.imagetrans.listener.SourceImageViewParam;
+import it.liuting.imagetrans.listener.SourceImageViewGet;
 
 /**
  * Created by liuting on 17/6/20.
@@ -101,22 +102,18 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
                     public void onClick(View v) {
                         ImageTrans.with(context)
                                 .setImageList(data.images)
-                                .setSourceImageViewParam(new SourceImageViewParam() {
+                                .setSourceImageView(new SourceImageViewGet() {
                                     @Override
-                                    public View getSourceView(int pos) {
+                                    public ImageView getImageView(int pos) {
                                         int layoutPos = recyclerView.indexOfChild(holder.itemView);
                                         View view = recyclerView.getChildAt(layoutPos + pos - position);
-                                        if (view != null) return view;
-                                        return holder.itemView;
-                                    }
-
-                                    @Override
-                                    public ScaleType getScaleType(int position) {
-                                        return ScaleType.CENTER_CROP;
+                                        if (view != null) return (ImageView) view;
+                                        return (ImageView) holder.itemView;
                                     }
                                 })
                                 .setImageLoad(new MyImageLoad())
                                 .setNowIndex(position)
+                                .setProgressBar(RingLoadingView.class,MyApplication.dpToPx(50),MyApplication.dpToPx(50))
                                 .setAdapter(new MyImageTransAdapter())
                                 .show();
                     }
@@ -144,19 +141,15 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
             public void onClick(View v) {
                 ImageTrans.with(context)
                         .setImageList(data.images)
-                        .setSourceImageViewParam(new SourceImageViewParam() {
+                        .setSourceImageView(new SourceImageViewGet() {
                             @Override
-                            public View getSourceView(int pos) {
+                            public ImageView getImageView(int pos) {
                                 return imageView;
-                            }
-
-                            @Override
-                            public ScaleType getScaleType(int position) {
-                                return ScaleType.CENTER_CROP;
                             }
                         })
                         .setImageLoad(new MyImageLoad())
                         .setNowIndex(0)
+                        .setProgressBar(RingLoadingView.class,MyApplication.dpToPx(50),MyApplication.dpToPx(50))
                         .setAdapter(new MyImageTransAdapter())
                         .show();
             }

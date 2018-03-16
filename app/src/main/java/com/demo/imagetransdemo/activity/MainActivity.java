@@ -12,11 +12,10 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 
 import com.bumptech.glide.Glide;
-import com.demo.imagetransdemo.adapter.CustomTransform;
 import com.demo.imagetransdemo.MyApplication;
-import com.demo.imagetransdemo.adapter.MyImageLoad;
-import com.demo.imagetransdemo.adapter.MyImageTransAdapter;
 import com.demo.imagetransdemo.R;
+import com.demo.imagetransdemo.adapter.CustomTransform;
+import com.demo.imagetransdemo.adapter.MyImageLoad;
 import com.demo.imagetransdemo.view.DragParentView;
 
 import java.util.ArrayList;
@@ -24,7 +23,7 @@ import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
-import it.liuting.imagetrans.listener.SourceImageViewParam;
+import it.liuting.imagetrans.listener.SourceImageViewGet;
 
 public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBarChangeListener {
     public static final int DEFAULT_MIN_SIZE = MyApplication.dpToPx(100);
@@ -62,15 +61,11 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
             public void onClick(View v) {
                 ImageTrans.with(MainActivity.this)
                         .setImageList(images)
-                        .setSourceImageViewParam(new SourceImageViewParam() {
+                        .setScaleType(scaleType)
+                        .setSourceImageView(new SourceImageViewGet() {
                             @Override
-                            public View getSourceView(int position) {
+                            public ImageView getImageView(int pos) {
                                 return imageView;
-                            }
-
-                            @Override
-                            public ScaleType getScaleType(int position) {
-                                return scaleType;
                             }
                         })
                         .setImageLoad(new MyImageLoad())

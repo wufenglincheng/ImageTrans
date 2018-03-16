@@ -1,196 +1,230 @@
 package it.liuting.imagetrans;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.IntRange;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.ViewParent;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 
-import it.liuting.imagetrans.image.ImageGesturesAttacher;
-import it.liuting.imagetrans.image.TransformAttacher;
-import it.liuting.imagetrans.listener.ImageTransAdapter;
 import it.liuting.imagetrans.listener.OnPullCloseListener;
-import it.liuting.imagetrans.listener.OnTransformListener;
 
 /**
- * Created by liuting on 17/5/25.
+ * Created by liuting on 18/3/12.
  */
 
-public class TransImageView extends ImageView implements OnPullCloseListener, View.OnLayoutChangeListener {
+public class TransImageView extends ImageView implements TransformAttacher.TransStateChangeListener, View.OnLayoutChangeListener {
 
-    private ImageGesturesAttacher mGesturesAttacher;
-    private TransformAttacher mTransformAttacher;
-    private ImageConfig mImageConfig;
-    private ImageTransAdapter mImageTransAdapter;
+    private ImageGesturesAttacher imageGesturesAttacher;
+    private TransformAttacher transformAttacher;
+    private TransformAttacher.TransStateChangeListener transStateChangeListener;
+    private OnPullCloseListener onPullCloseListener;
+    private ImageTransAdapter imagesTransAdapter;
+    private Drawable mDrawable = null;
 
     public TransImageView(Context context) {
         this(context, null);
     }
 
-    public TransImageView(Context context, AttributeSet attr) {
-        this(context, attr, 0);
+    public TransImageView(Context context, @Nullable AttributeSet attrs) {
+        this(context, attrs, 0);
     }
 
-    public TransImageView(Context context, AttributeSet attr, int defStyle) {
-        super(context, attr, defStyle);
+    public TransImageView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
         init();
     }
 
-    protected void init() {
+    @TargetApi(21)
+    public TransImageView(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+        super(context, attrs, defStyleAttr, defStyleRes);
+        init();
+    }
+
+    private void init() {
         setBackgroundAlpha(0);
-        mGesturesAttacher = new ImageGesturesAttacher(this);
-        mTransformAttacher = new TransformAttacher(this);
-        mGesturesAttacher.setOnPullCloseListener(this);
-        super.setScaleType(ScaleType.MATRIX);
-        mGesturesAttacher.setOnClickListener(new OnClickListener() {
+        imageGesturesAttacher = new ImageGesturesAttacher(this);
+        imageGesturesAttacher.setOnPullCloseListener(new OnPullCloseListener() {
             @Override
-            public void onClick(View v) {
-                if (mImageTransAdapter != null) {
-                    if (!mImageTransAdapter.onImageClick()) {
-                        onClose();
-                    }
-                    return;
-                }
-                onClose();
+            public void onClose() {
+                showCloseTransform();
+            }
+
+            @Override
+            public void onPull(float range) {
+                if (imagesTransAdapter != null) imagesTransAdapter.onPullRange(range);
+            }
+
+            @Override
+            public void onCancel() {
+                if (imagesTransAdapter != null) imagesTransAdapter.onPullCancel();
             }
         });
+        imageGesturesAttacher.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (imagesTransAdapter != null) {
+                    if (!imagesTransAdapter.onClick(v)) showCloseTransform();
+                } else {
+                    showCloseTransform();
+                }
+            }
+        });
+        imageGesturesAttacher.setOnLongClickListener(new OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                if (imagesTransAdapter != null) imagesTransAdapter.onLongClick(v);
+                return false;
+            }
+        });
+        transformAttacher = new TransformAttacher(this);
+        transformAttacher.setTransStateChangeListener(this);
+        super.setScaleType(ScaleType.MATRIX);
         addOnLayoutChangeListener(this);
     }
 
-    public void setImageConfig(ImageConfig imageConfig) {
-        this.mImageConfig = imageConfig;
-        mTransformAttacher.setImageConfig(imageConfig);
+    public void settingConfig(@NonNull ITConfig itConfig, @NonNull ThumbConfig thumbConfig) {
+        imageGesturesAttacher.settingConfig(itConfig);
+        transformAttacher.settingConfig(itConfig, thumbConfig);
     }
 
-    public void showThumbWithTransform() {
-        if (mImageConfig == null || mImageConfig.thumbnailWeakRefe == null) return;
-        super.setImageDrawable(mImageConfig.thumbnailWeakRefe.get());
-        mTransformAttacher.showThumbWithTransform();
-
+    public void showThumb(final boolean needTrans) {
+        getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                transformAttacher.showThumb(needTrans);
+                getViewTreeObserver().removeOnPreDrawListener(this);
+                return false;
+            }
+        });
+        postInvalidate();
     }
 
-    public void showThumb() {
-        setBackgroundAlpha(255);
-        if (mImageConfig == null || mImageConfig.thumbnailWeakRefe == null) return;
-        super.setImageDrawable(mImageConfig.thumbnailWeakRefe.get());
-        mTransformAttacher.showThumb();
+    public void showImage(Drawable drawable, final boolean needTrans) {
+        if (drawable == null) return;
+        mDrawable = drawable;
+        mDrawable.setBounds(0, 0, mDrawable.getIntrinsicWidth(), mDrawable.getIntrinsicHeight());
+        getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                imageGesturesAttacher.update(mDrawable, false);
+                transformAttacher.showImage(needTrans);
+                getViewTreeObserver().removeOnPreDrawListener(this);
+                return false;
+            }
+        });
+        postInvalidate();
     }
 
-    public void setImageWithTransform(Drawable drawable) {
-        setImageDrawable(drawable);
-        mTransformAttacher.showOriginalWithTransform();
-    }
-
-    public void setImage(Drawable drawable) {
-        mTransformAttacher.pause();
-        setBackgroundAlpha(255);
-        setImageDrawable(drawable);
+    public void showCloseTransform() {
+        transformAttacher.showClose();
     }
 
     @Override
-    public void setImageDrawable(Drawable drawable) {
+    public void setImageDrawable(@Nullable Drawable drawable) {
         super.setImageDrawable(drawable);
-        mGesturesAttacher.update();
-    }
-
-    public void resetMatrix() {
-        mGesturesAttacher.resetMatrix();
-    }
-
-    public boolean isRunTransform() {
-        return mTransformAttacher.isRunning();
-    }
-
-    public Matrix getMinMatrix() {
-        return mGesturesAttacher.getMinMatrix();
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        if (mTransformAttacher.isRunning()) {
-            mTransformAttacher.onDraw(canvas);
-        } else {
-            super.onDraw(canvas);
-        }
-    }
-
-    /**
-     * 这里复写方法 是为了避免图片根据矩阵分块加载 导致动画过程中图片显示不完整
-     *
-     * @return
-     */
-    @Override
-    public Matrix getImageMatrix() {
-        if (mTransformAttacher.isRunningOriginalTrans()) {
-            return getMinMatrix();
-        }
-        return super.getImageMatrix();
-    }
-
-    @Override
-    public void setScaleType(ScaleType scaleType) {
-        mGesturesAttacher.setScaleType(scaleType);
-    }
-
-    @Override
-    public void onClose() {
-        mTransformAttacher.runCloseTransform();
-    }
-
-    @Override
-    public void onPull(float range) {
-        if (mImageTransAdapter != null) {
-            mImageTransAdapter.pullRange(range);
-        }
-    }
-
-    @Override
-    public void onCancel() {
-        if (mImageTransAdapter != null) {
-            mImageTransAdapter.pullCancel();
-        }
-    }
-
-    @Override
-    public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
-        // 在边界改变的时候更新矩阵
-        if (null != mGesturesAttacher) {
-            mGesturesAttacher.update();
-        }
-        mTransformAttacher.onLayoutChange();
-    }
-
-    public void setOnCloseListener(OnCloseListener listener) {
-        mTransformAttacher.setOnCloseListener(listener);
+        imageGesturesAttacher.resetMatrix();
     }
 
     public void setBackgroundAlpha(@IntRange(from = 0, to = 255) int alpha) {
         setBackgroundColor(Color.argb(alpha, 0, 0, 0));
     }
 
-    public void setOpenTransformListener(OnTransformListener openTransformListener) {
-        mTransformAttacher.setOpenTransListener(openTransformListener);
+    public Drawable getImageDrawable() {
+        return mDrawable;
     }
 
-    public void setCloseTransformListener(OnTransformListener closeTransformListener) {
-        mTransformAttacher.setCloseTransListener(closeTransformListener);
-    }
-
-    public void setImageTransAdapter(final @Nullable ImageTransAdapter l) {
-        this.mImageTransAdapter = l;
+    public RectF getDisplayRect(boolean checkbound) {
+        return new RectF(imageGesturesAttacher.getDisplayRect(checkbound));
     }
 
     @Override
-    public void setOnLongClickListener(@Nullable OnLongClickListener l) {
-        mGesturesAttacher.setOnLongClickListener(l);
+    public Matrix getImageMatrix() {
+        if (transformAttacher.isDrawing()) {
+            return imageGesturesAttacher.getMinMatrix();
+        }
+        return imageGesturesAttacher.getDrawMatrix();
     }
 
-    public interface OnCloseListener {
-        void close();
+    public Matrix getDrawMatrix() {
+        return imageGesturesAttacher.getDrawMatrix();
+    }
+
+    @Override
+    public void onChange(TransformAttacher.TransState state) {
+        switch (state) {
+            case OPEN_TO_THUMB:
+            case OPEN_TO_ORI:
+                if (getParent() != null) {
+                    imageGesturesAttacher.requestDisallowInterceptTouchEvent(true);
+                }
+                break;
+            case THUMB:
+                if (getParent() != null) {
+                    imageGesturesAttacher.requestDisallowInterceptTouchEvent(false);
+                }
+                if (mDrawable != null)
+                    transformAttacher.showImage(true);
+                setBackgroundAlpha(255);
+                break;
+            case ORI:
+                if (getParent() != null) {
+                    imageGesturesAttacher.requestDisallowInterceptTouchEvent(false);
+                }
+                setImageDrawable(mDrawable);
+                setBackgroundAlpha(255);
+                break;
+            case THUMB_TO_CLOSE:
+            case ORI_TO_CLOSE:
+                if (getParent() != null) {
+                    imageGesturesAttacher.requestDisallowInterceptTouchEvent(true);
+                    getViewPager(getParent()).setCanScroll(false);
+                }
+                break;
+        }
+        if (transStateChangeListener != null) transStateChangeListener.onChange(state);
+    }
+
+    public void setTransStateChangeListener(TransformAttacher.TransStateChangeListener listener) {
+        this.transStateChangeListener = listener;
+    }
+
+    public void setImageTransAdapter(ImageTransAdapter adapter) {
+        this.imagesTransAdapter = adapter;
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        if (transformAttacher.needIntercept()) {
+            transformAttacher.onDraw(canvas);
+        } else {
+            super.onDraw(canvas);
+        }
+    }
+
+
+    @Override
+    public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+        if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+            imageGesturesAttacher.update();
+        }
+    }
+
+    InterceptViewPager getViewPager(ViewParent parent) {
+        if (parent == null) return null;
+        if (parent instanceof InterceptViewPager) {
+            return (InterceptViewPager) parent;
+        } else {
+            return getViewPager(parent.getParent());
+        }
     }
 }
