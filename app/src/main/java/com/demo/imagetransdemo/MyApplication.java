@@ -2,9 +2,10 @@ package com.demo.imagetransdemo;
 
 import android.app.Application;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.DisplayMetrics;
+
+import com.bumptech.glide.Glide;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -97,31 +98,44 @@ public class MyApplication extends Application {
         byte[] md5 = getMD5(imageUri.getBytes());
         BigInteger bi = new BigInteger(md5).abs();
         if (imageUri.endsWith(".gif") || imageUri.endsWith(".GIF")) {
-            return bi.toString(RADIX) + ".weicogif";
+            return bi.toString(RADIX) + ".itgif";
         }
-        return bi.toString(RADIX) + ".weico";
+        return bi.toString(RADIX) + ".it";
     }
 
-    public static void clearCache() {
-        File file  = new File(IMAGE_CACHE_PATH);
-        File[] files = file.listFiles();
-        for(File item : files){
-            item.delete();
-        }
+    public static void clearCache(final Context context) {
+        cThreadPool.submit(new Runnable() {
+            @Override
+            public void run() {
+                File file = new File(IMAGE_CACHE_PATH);
+                File[] files = file.listFiles();
+                for (File item : files) {
+                    item.delete();
+                }
+                Glide.get(context).clearDiskCache();
+            }
+        });
+
     }
 
-    public static String getFromAssets(Context context,String fileName){
+    public static String getFromAssets(Context context, String fileName) {
         try {
-            InputStreamReader inputReader = new InputStreamReader( context.getResources().getAssets().open(fileName) );
+            InputStreamReader inputReader = new InputStreamReader(context.getResources().getAssets().open(fileName));
             BufferedReader bufReader = new BufferedReader(inputReader);
-            String line="";
-            String Result="";
-            while((line = bufReader.readLine()) != null)
+            String line = "";
+            String Result = "";
+            while ((line = bufReader.readLine()) != null)
                 Result += line;
             return Result;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return "";
+    }
+
+    public static String getCachedPath(String url) {
+        String key = generate(url);
+        String destUrl = getImageCachePath() + "/" + key;
+        return destUrl;
     }
 }

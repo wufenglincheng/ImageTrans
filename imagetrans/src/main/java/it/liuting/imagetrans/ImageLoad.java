@@ -26,7 +26,7 @@ public interface ImageLoad {
      */
     boolean isCached(String url);
 
-    void cancel(String unique);
+    void cancel(String url,String unique);
 
     /**
      * 图片加载器中用来回传下载好的图片

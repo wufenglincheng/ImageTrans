@@ -1,7 +1,11 @@
 package com.demo.imagetransdemo.activity;
 
+import android.Manifest;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatSeekBar;
 import android.support.v7.widget.Toolbar;
@@ -10,6 +14,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.SeekBar;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.demo.imagetransdemo.MyApplication;
@@ -24,7 +29,13 @@ import java.util.List;
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
 import it.liuting.imagetrans.listener.SourceImageViewGet;
+import permissions.dispatcher.NeedsPermission;
+import permissions.dispatcher.OnPermissionDenied;
+import permissions.dispatcher.OnShowRationale;
+import permissions.dispatcher.PermissionRequest;
+import permissions.dispatcher.RuntimePermissions;
 
+@RuntimePermissions
 public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBarChangeListener {
     public static final int DEFAULT_MIN_SIZE = MyApplication.dpToPx(100);
     Toolbar toolbar;
@@ -39,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        MainActivityPermissionsDispatcher.initPermissionWithCheck(this);
         setContentView(R.layout.activity_main);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -72,7 +84,42 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                         .show();
             }
         });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        MainActivityPermissionsDispatcher.onRequestPermissionsResult(this, requestCode, grantResults);
+    }
+
+    @NeedsPermission({Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE})
+    void initPermission() {
         loadImage();
+    }
+
+    @OnShowRationale({Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE})
+    void showRationale(final PermissionRequest request) {
+        new AlertDialog.Builder(this)
+                .setTitle("请求权限")
+                .setMessage("需要SD卡读写权限")
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        request.proceed();
+                    }
+                })
+                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        request.cancel();
+                    }
+                }).show();
+    }
+
+    @OnPermissionDenied({Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE})
+    void DeniedPermission() {
+        Toast.makeText(this, "SD卡读写权限被禁止", Toast.LENGTH_LONG).show();
+        finish();
     }
 
     @Override
@@ -99,6 +146,9 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                 startActivity(intent);
                 break;
             }
+            case R.id.action_clear_cache:
+                MyApplication.clearCache(this);
+                break;
         }
         return true;
     }

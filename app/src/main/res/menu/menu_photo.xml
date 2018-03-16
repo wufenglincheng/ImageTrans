@@ -14,4 +14,9 @@
         android:id="@+id/action_time_line"
         android:title="时间线"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_clear_cache"
+        android:title="清空缓存"
+        app:showAsAction="never" />
 </menu>

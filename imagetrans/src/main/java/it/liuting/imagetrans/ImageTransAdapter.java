@@ -36,6 +36,10 @@ public abstract class ImageTransAdapter {
 
     }
 
+    protected void onPageSelected(int pos) {
+
+    }
+
     protected void onProgressChange(View progressBar, float progress) {
 
     }

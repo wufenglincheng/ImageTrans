@@ -18,7 +18,7 @@ import it.liuting.imagetrans.listener.OnTransformListener;
  * Created by liuting on 18/3/14.
  */
 
-public class ImageFragment extends Fragment {
+public class ImageFragment extends Fragment implements TransformAttacher.TransStateChangeListener {
 
     public static ImageFragment newInstance(int pos, String url, ImageTransBuild build) {
         ImageFragment fragment = new ImageFragment();
@@ -36,60 +36,51 @@ public class ImageFragment extends Fragment {
     private OnTransformListener transformOpenListener;
     private String uniqueStr;
     private View progressBar;
+    private boolean transOpenEnd;
+    private boolean loadFinish = false;
+    private boolean isCached = false;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         uniqueStr = UUID.randomUUID().toString();
-        return inflater.inflate(R.layout.image_fragment, container, false);
+        View view = inflater.inflate(R.layout.image_fragment, container, false);
+        progressBar = build.inflateProgress(getContext(), (FrameLayout) view);
+        imageView = (TransImageView) view.findViewById(R.id.imageView);
+        return view;
     }
 
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        progressBar = build.inflateProgress(getContext(), (FrameLayout) view);
+        hideProgress();
         final boolean need = build.needTransOpen(pos, true);
-        imageView = (TransImageView) getView().findViewById(R.id.imageView);
+        isCached = build.imageLoad.isCached(url);
         imageView.settingConfig(build.itConfig, new ThumbConfig(build.sourceImageViewGet.getImageView(pos), getResources(), build.scaleType));
         imageView.setImageTransAdapter(build.imageTransAdapter);
-        imageView.setTransStateChangeListener(new TransformAttacher.TransStateChangeListener() {
-            @Override
-            public void onChange(TransformAttacher.TransState state) {
-                switch (state) {
-                    case OPEN_TO_THUMB:
-                    case OPEN_TO_ORI:
-                        if (transformOpenListener != null) transformOpenListener.transformStart();
-                        break;
-                    case THUMB:
-                    case ORI:
-                        if (transformOpenListener != null) transformOpenListener.transformEnd();
-                        break;
-                    case THUMB_TO_CLOSE:
-                    case ORI_TO_CLOSE:
-                        build.imageTransAdapter.onCloseTransStart();
-                        break;
-                    case CLOSEED:
-                        build.imageTransAdapter.onCloseTransEnd();
-                        build.dialogInterface.dismiss();
-                        break;
-                }
-            }
-        });
+        imageView.setTransStateChangeListener(this);
         final boolean needShowThumb = !build.itConfig.noThumb && !(build.itConfig.noThumbWhenCached && build.imageLoad.isCached(url));
         if (needShowThumb) {
             imageView.showThumb(need);
         }
+        loadImage(need || needShowThumb);
+    }
+
+    void loadImage(final boolean needTrans) {
         build.imageLoad.loadImage(url, new ImageLoad.LoadCallback() {
             @Override
             public void progress(float progress) {
-                if (progressBar != null)
-                    build.imageTransAdapter.onProgressChange(progressBar, progress);
+                if (getUserVisibleHint() && transOpenEnd) {
+                    if (progressBar != null)
+                        build.imageTransAdapter.onProgressChange(progressBar, progress);
+                }
             }
 
             @Override
             public void loadFinish(Drawable drawable) {
-                if (progressBar != null) progressBar.setVisibility(View.GONE);
-                imageView.showImage(drawable, (need || needShowThumb) && getUserVisibleHint());
+                hideProgress();
+                loadFinish = true;
+                imageView.showImage(drawable, needTrans && getUserVisibleHint());
             }
         }, imageView, uniqueStr);
     }
@@ -102,9 +93,54 @@ public class ImageFragment extends Fragment {
         this.transformOpenListener = listener;
     }
 
+    private void showProgress() {
+        if (progressBar != null && !loadFinish) progressBar.setVisibility(View.VISIBLE);
+    }
+
+    private void hideProgress() {
+        if (progressBar != null) progressBar.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void onChange(TransformAttacher.TransState state) {
+        switch (state) {
+            case OPEN_TO_THUMB:
+            case OPEN_TO_ORI:
+                if (transformOpenListener != null) transformOpenListener.transformStart();
+                break;
+            case THUMB:
+            case ORI:
+                if (!transOpenEnd) {
+                    transOpenEnd = true;
+                    if (!isCached)
+                        showProgress();
+                    if (transformOpenListener != null) transformOpenListener.transformEnd();
+                }
+                break;
+            case THUMB_TO_CLOSE:
+            case ORI_TO_CLOSE:
+                build.imageTransAdapter.onCloseTransStart();
+                break;
+            case CLOSEED:
+                build.imageTransAdapter.onCloseTransEnd();
+                build.dialogInterface.dismiss();
+                break;
+        }
+    }
+
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if (isVisibleToUser && transOpenEnd) {
+            showProgress();
+        } else {
+            hideProgress();
+        }
+    }
+
     @Override
     public void onDestroy() {
-        build.imageLoad.cancel(uniqueStr);
+        build.imageLoad.cancel(url, uniqueStr);
         super.onDestroy();
     }
 }

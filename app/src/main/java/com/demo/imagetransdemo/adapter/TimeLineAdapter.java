@@ -16,6 +16,8 @@ import com.demo.imagetransdemo.R;
 import com.demo.imagetransdemo.view.ItemDecorationAlbumColumns;
 import com.demo.imagetransdemo.view.RingLoadingView;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 import it.liuting.imagetrans.ImageTrans;
@@ -78,6 +80,7 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
         ItemDecorationAlbumColumns itemDecoration = new ItemDecorationAlbumColumns(space, column);
         final int itemWidth = (imageParentWidth - space * (column - 1)) / column;
         final int itemHeight = column == 2 ? (int) (itemWidth * 9f / 16) : itemWidth;
+        clearItemDecorations(recyclerView);
         recyclerView.addItemDecoration(itemDecoration);
         recyclerView.setFocusable(false);
         recyclerView.setAdapter(new RecyclerView.Adapter<ViewHolder>() {
@@ -113,7 +116,7 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
                                 })
                                 .setImageLoad(new MyImageLoad())
                                 .setNowIndex(position)
-                                .setProgressBar(RingLoadingView.class,MyApplication.dpToPx(50),MyApplication.dpToPx(50))
+                                .setProgressBar(RingLoadingView.class, MyApplication.dpToPx(50), MyApplication.dpToPx(50))
                                 .setAdapter(new MyImageTransAdapter())
                                 .show();
                     }
@@ -125,6 +128,17 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
                 return data.images.size();
             }
         });
+    }
+
+    static void clearItemDecorations(RecyclerView recyclerView) {
+        try {
+            Field field = RecyclerView.class.getDeclaredField("mItemDecorations");
+            field.setAccessible(true);
+            ArrayList<RecyclerView.ItemDecoration> itemDecorations = (ArrayList<RecyclerView.ItemDecoration>) field.get(recyclerView);
+            itemDecorations.clear();
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
     }
 
     private void buildSingleImage(final ItemData data, ViewHolder holder, int imageParentWidth) {
@@ -149,7 +163,7 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
                         })
                         .setImageLoad(new MyImageLoad())
                         .setNowIndex(0)
-                        .setProgressBar(RingLoadingView.class,MyApplication.dpToPx(50),MyApplication.dpToPx(50))
+                        .setProgressBar(RingLoadingView.class, MyApplication.dpToPx(50), MyApplication.dpToPx(50))
                         .setAdapter(new MyImageTransAdapter())
                         .show();
             }

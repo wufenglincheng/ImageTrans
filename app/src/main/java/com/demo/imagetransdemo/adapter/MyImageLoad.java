@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.util.Log;
 import android.widget.ImageView;
 
+import com.demo.imagetransdemo.MyApplication;
 import com.demo.imagetransdemo.TileBitmapDrawable;
 import com.demo.imagetransdemo.imageload.OkHttpImageLoad;
 
@@ -23,6 +24,7 @@ public class MyImageLoad implements ImageLoad {
     private static final Pattern webPattern = Pattern.compile("http[s]*://[[[^/:]&&[a-zA-Z_0-9]]\\.]+(:\\d+)?(/[a-zA-Z_0-9]+)*(/[a-zA-Z_0-9]*([a-zA-Z_0-9]+\\.[a-zA-Z_0-9]+)*)?(\\?(&?[a-zA-Z_0-9]+=[%[a-zA-Z_0-9]-]*)*)*(#[[a-zA-Z_0-9]|-]+)?(.jpg|.png|.gif|.jpeg)?");
     private static final String ASSET_PATH_SEGMENT = "android_asset";
     private static final HashMap<String, LoadCallback> loadCallbackMap = new HashMap<>();
+    private static final HashMap<String, OkHttpImageLoad.ImageDownLoadListener> imageDownLoadListenerMap = new HashMap<>();
 
     @Override
     public void loadImage(final String url, final LoadCallback callback, final ImageView imageView, final String unique) {
@@ -50,9 +52,8 @@ public class MyImageLoad implements ImageLoad {
     /**
      * 从网络加载图片
      */
-    private void loadImageFromNet(String url, final String unique, final ImageView imageView) {
-
-        OkHttpImageLoad.get(url).url(url).listener(new OkHttpImageLoad.ImageDownLoadListener() {
+    private void loadImageFromNet(final String url, final String unique, final ImageView imageView) {
+        OkHttpImageLoad.ImageDownLoadListener loadListener = new OkHttpImageLoad.ImageDownLoadListener() {
             @Override
             public void inProgress(float progress, long total) {
                 onProgress(unique, progress);
@@ -64,8 +65,8 @@ public class MyImageLoad implements ImageLoad {
             }
 
             @Override
-            public void onSuccess(String path) {
-                loadImageFromLocal(path, unique, imageView);
+            public void onSuccess() {
+                loadImageFromLocal(MyApplication.getCachedPath(url), unique, imageView);
             }
 
             @Override
@@ -73,7 +74,9 @@ public class MyImageLoad implements ImageLoad {
 
             }
 
-        }).execute();
+        };
+        imageDownLoadListenerMap.put(unique, loadListener);
+        OkHttpImageLoad.load(url, loadListener);
     }
 
     /**
@@ -102,7 +105,7 @@ public class MyImageLoad implements ImageLoad {
     }
 
     public static void onFinishLoad(String unique, Drawable drawable) {
-        LoadCallback loadCallback = loadCallbackMap.get(unique);
+        LoadCallback loadCallback = loadCallbackMap.remove(unique);
         if (loadCallback != null) {
             loadCallback.loadFinish(drawable);
         }
@@ -122,13 +125,13 @@ public class MyImageLoad implements ImageLoad {
             //是本地图片不用预览图
             return true;
         }
-        return OkHttpImageLoad.isCached(url);
+        return OkHttpImageLoad.checkImageExists(url);
     }
 
     @Override
-    public void cancel(String unique) {
+    public void cancel(String url, String unique) {
         removeLoadCallback(unique);
-        OkHttpImageLoad.cancel(unique);
+        OkHttpImageLoad.destroy(url, imageDownLoadListenerMap.remove(unique));
     }
 
     private static boolean isNetUri(String url) {

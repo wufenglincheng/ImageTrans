@@ -20,6 +20,7 @@ import com.demo.imagetransdemo.R;
 import com.demo.imagetransdemo.adapter.CustomTransform;
 import com.demo.imagetransdemo.adapter.MyImageLoad;
 import com.demo.imagetransdemo.adapter.MyImageTransAdapter;
+import com.demo.imagetransdemo.view.RingLoadingView;
 import com.demo.imagetransdemo.view.SpaceDecoration;
 
 import java.util.ArrayList;
@@ -38,7 +39,7 @@ public class NetImageActivity extends AppCompatActivity {
 
     public static String[] netImages = {
             "http://wx1.sinaimg.cn/bmiddle/9672f95cly1fgcl0xc7hmj20gt5fwhdt.jpg",
-            "http://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Along_the_River_7-119-3.jpg/5000px-Along_the_River_7-119-3.jpg",
+            "https://ss3.bdstatic.com/70cFv8Sh_Q1YnxGkpoWK1HF6hhy/it/u=4210120443,3922685164&fm=27&gp=0.jpg",
             "https://ss1.bdstatic.com/70cFuXSh_Q1YnxGkpoWK1HF6hhy/it/u=2966021298,3341101515&fm=23&gp=0.jpg",
             "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1496402134202&di=6c7f4a6afa5bdf02000c788f7a51e9c0&imgtype=0&src=http%3A%2F%2Fcdnq.duitang.com%2Fuploads%2Fitem%2F201506%2F23%2F20150623183946_iZtFs.jpeg",
             "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1496996892&di=ea1e213c8ddd4427c55f073db9bf91b7&imgtype=jpg&er=1&src=http%3A%2F%2Fpic27.nipic.com%2F20130323%2F9483785_182530048000_2.jpg",
@@ -90,9 +91,6 @@ public class NetImageActivity extends AppCompatActivity {
             case R.id.action_fit_xy:
                 scaleType = ScaleType.FIT_XY;
                 break;
-            case R.id.action_clear_cache:
-                MyApplication.clearCache();
-                break;
         }
         adapter.notifyDataSetChanged();
         return true;
@@ -140,6 +138,7 @@ public class NetImageActivity extends AppCompatActivity {
                             })
                             .setImageLoad(new MyImageLoad())
                             .setNowIndex(position)
+                            .setProgressBar(RingLoadingView.class, MyApplication.dpToPx(50), MyApplication.dpToPx(50))
                             .setAdapter(new MyImageTransAdapter())
                             .show();
                 }

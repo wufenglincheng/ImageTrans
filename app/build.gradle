@@ -28,4 +28,7 @@ dependencies {
         exclude module: 'support-v4'
     }
     compile 'com.squareup.okhttp:okhttp-urlconnection:2.4.0'
+    compile 'com.github.hotchemi:permissionsdispatcher:2.1.3'
+//    compile 'io.supercharge:shimmerlayout:0.8.0'
+    annotationProcessor 'com.github.hotchemi:permissionsdispatcher-processor:2.1.3'
 }

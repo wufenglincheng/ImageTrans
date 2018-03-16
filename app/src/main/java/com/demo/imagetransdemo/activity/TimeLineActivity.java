@@ -25,7 +25,6 @@ import java.util.List;
 public class TimeLineActivity extends AppCompatActivity {
     RecyclerView recyclerView;
     TimeLineAdapter timeLineAdapter;
-    List<ItemData> datas = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -33,29 +32,44 @@ public class TimeLineActivity extends AppCompatActivity {
         setContentView(R.layout.activity_time_line);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        initData();
-        timeLineAdapter = new TimeLineAdapter(datas, this);
-        recyclerView.setAdapter(timeLineAdapter);
+        loadData();
     }
 
-    private void initData() {
-        String response = MyApplication.getFromAssets(this,"data.json");
-        try {
-            JSONArray jsonArray = new JSONArray(response);
-            for (int i=0;i<jsonArray.length();i++){
-                ItemData itemData = new ItemData();
-                JSONObject jsonObject = jsonArray.optJSONObject(i);
-                itemData.text = jsonObject.optString("text");
-                JSONArray images = jsonObject.optJSONArray("images");
-                for (int j = 0;j<images.length();j++){
-                    String url = images.optString(j);
-                    itemData.images.add(url);
+    private void loadData() {
+        MyApplication.cThreadPool.submit(new Runnable() {
+            @Override
+            public void run() {
+                List<ItemData> datas = new ArrayList<>();
+                String response = MyApplication.getFromAssets(TimeLineActivity.this, "data.json");
+                try {
+                    JSONArray jsonArray = new JSONArray(response);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        ItemData itemData = new ItemData();
+                        JSONObject jsonObject = jsonArray.optJSONObject(i);
+                        itemData.text = jsonObject.optString("text");
+                        JSONArray images = jsonObject.optJSONArray("images");
+                        for (int j = 0; j < images.length(); j++) {
+                            String url = images.optString(j);
+                            itemData.images.add(url);
+                        }
+                        datas.add(itemData);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
-                datas.add(itemData);
+                setData(datas);
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
+        });
     }
+
+    private void setData(final List<ItemData> datas) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                timeLineAdapter = new TimeLineAdapter(datas, TimeLineActivity.this);
+                recyclerView.setAdapter(timeLineAdapter);
+            }
+        });
+    }
+
 }

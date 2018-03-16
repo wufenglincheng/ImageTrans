@@ -64,7 +64,6 @@ public class PhotoAlbumActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_scale_type, menu);
-        menu.findItem(R.id.action_clear_cache).setVisible(false);
         return super.onCreateOptionsMenu(menu);
     }
 

@@ -33,19 +33,6 @@ public class OkHttpImageLoad {
     private volatile static OkHttpImageLoad mInstance;
     private HashMap<String, Builder> map = new LinkedHashMap<>();
 
-    public static Builder get(String url) {
-        if (mInstance == null) {
-            mInstance = new OkHttpImageLoad();
-        }
-        String key = url;
-        Builder builder = mInstance.map.get(key);
-        if (builder == null) {
-            builder = new Builder(key);
-            mInstance.map.put(key, builder);
-        }
-        return builder;
-    }
-
     private OkHttpImageLoad() {
         mOkHttpClient = new OkHttpClient();
         mPlatform = Platform.get();
@@ -55,18 +42,92 @@ public class OkHttpImageLoad {
         return mPlatform.defaultCallbackExecutor();
     }
 
-    public static void cancel(String key) {
-        if (null == mInstance) {
+    /**
+     * 加载图片
+     *
+     * @param url
+     * @param listener
+     */
+    public static void load(String url, ImageDownLoadListener listener) {
+        if (TextUtils.isEmpty(url)) {
+            listener.onError(new Exception("链接不能为null"));
             return;
         }
-        Builder builder = mInstance.map.get(key);
-        if (null != builder) {
-            builder.cancel();
-            builder.removeAllListener();
-            try {
-                mInstance.map.remove(key);
-            } catch (Throwable e) {
+        if (mInstance == null) {
+            mInstance = new OkHttpImageLoad();
+        }
+        Builder builder = null;
+        if (mInstance.map.containsKey(url)) {
+            builder = mInstance.map.get(url);
+        } else if (checkImageExists(url)) {
+            //没有发现正在下载，检验是否已经下载过了
+            listener.onSuccess();
+            return;
+        }
+        if (builder == null) {
+            builder = new Builder(url);
+            mInstance.map.put(url, builder);
+        }
+        builder.listener(listener);
+        builder.start();
+    }
 
+    /**
+     * 判断图片是否已经存在
+     *
+     * @param url
+     * @return
+     */
+    public static boolean checkImageExists(String url) {
+        String key = MyApplication.generate(url);
+        String destUrl = MyApplication.getImageCachePath() + "/" + key;
+        File file = new File(destUrl);
+        if (file.exists()) {
+            int size = MyApplication.getMaxSizeOfBitMap(destUrl);
+            if (size > 0) {
+                return true;
+            } else {
+                file.delete();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 解绑监听器,实际下载还在后台进行
+     *
+     * @param url
+     * @param listener
+     */
+    public static void cancel(String url, ImageDownLoadListener listener) {
+        if (mInstance == null) {
+            return;
+        }
+        if (mInstance.map.containsKey(url)) {
+            Builder builder = mInstance.map.get(url);
+            if (builder != null) {
+                builder.removeListener(listener);
+            }
+        }
+    }
+
+    /**
+     * 取消下载图片
+     *
+     * @param url
+     * @param listener
+     */
+    public static void destroy(String url, ImageDownLoadListener listener) {
+        if (mInstance == null) {
+            return;
+        }
+        if (mInstance.map.containsKey(url)) {
+            Builder builder = mInstance.map.get(url);
+            if (builder != null) {
+                mInstance.map.remove(url);
+                builder.cancel();
+                builder.removeListener(listener);
             }
         }
     }
@@ -77,35 +138,33 @@ public class OkHttpImageLoad {
         private Request request;
         private Call call;
         private List<ImageDownLoadListener> imageDownLoadListener = new ArrayList<>();
-        private boolean isSucess = false;
-        private String key;
+        private boolean isSuccess = false;
+        private boolean isStarted = false;
+        private float currentProgress = 0f;
+        private long total = 0L;
+        private State currentState = State.DOWNLOADING;
 
-        public Builder(String key) {
-            this.key = key;
+        private enum State {
+            DOWNLOADING, DOWNLOADERROR, DOWNLOADFINISH
         }
 
-        public Builder url(String url) {
+        public Builder(String url) {
             this.url = url;
-            return this;
+            request = builder.url(url).get().build();
+            call = mInstance.mOkHttpClient.newCall(request);
         }
 
         public Builder listener(ImageDownLoadListener listener) {
-            imageDownLoadListener.add(listener);
+            if (!imageDownLoadListener.contains(listener))
+                imageDownLoadListener.add(listener);
             return this;
-        }
-
-        public boolean build() {
-            if (request != null && call != null) return false;
-            request = builder.url(url).get().build();
-            call = mInstance.mOkHttpClient.newCall(request);
-            return true;
         }
 
         public void cancel() {
             if (null == call) {
                 throw new NullPointerException(" cancel() must be called before calling build() ");
             }
-            if (!isSucess) {
+            if (!isSuccess) {
                 //切换到非UI线程，进行网络的取消工作
                 MyApplication.cThreadPool.submit(new Runnable() {
                     @Override
@@ -113,46 +172,34 @@ public class OkHttpImageLoad {
                         call.cancel();
                     }
                 });
-
-                if (null != imageDownLoadListener) {
-                    for (ImageDownLoadListener listener : imageDownLoadListener)
-                        listener.onCancel();
-                }
+                downloadCancel();
             }
-
         }
 
-        public void execute() {
-            if (!build()) {
-                return;
-            }
-            if (!TextUtils.isEmpty(url)) {
-                if (isCached(url)) {
-                    sendSuccessResultCallback();
-                    return;
-                }
-            }
+        private void execute() {
+            isStarted = true;
+            currentState = State.DOWNLOADING;
             call.enqueue(new Callback() {
                 @Override
                 public void onFailure(Request request, final IOException e) {
-                    sendFailResultCallback(e);
+                    downloadFail(e);
                 }
 
                 @Override
                 public void onResponse(Response response) throws IOException {
                     try {
                         if (call.isCanceled()) {
-                            sendFailResultCallback(new IOException("Canceled!"));
+                            downloadFail(new Exception("Canceled!"));
                             return;
                         }
                         if (!response.isSuccessful()) {
-                            sendFailResultCallback(new IOException("request failed , reponse's code is : " + response.code()));
+                            downloadFail(new Exception("request failed , reponse's code is : " + response.code()));
                             return;
                         }
                         saveFile(response);
-                        sendSuccessResultCallback();
+                        downloadSuccess();
                     } catch (Exception e) {
-                        sendFailResultCallback(e);
+                        downloadFail(e);
                     } finally {
                         if (response.body() != null)
                             response.body().close();
@@ -161,7 +208,6 @@ public class OkHttpImageLoad {
                 }
             });
         }
-
 
         private void saveFile(Response response) throws IOException {
             InputStream is = null;
@@ -178,67 +224,103 @@ public class OkHttpImageLoad {
                 if (!dir.exists()) {
                     dir.mkdirs();
                 }
-                String destUrl = getCacheFileName(url);
+                String key = MyApplication.generate(url);
+                String destUrl = MyApplication.getImageCachePath() + "/" + key;
                 File file = new File(destUrl);
                 fos = new FileOutputStream(file);
                 while ((len = is.read(buf)) != -1) {
                     sum += len;
                     fos.write(buf, 0, len);
                     final long finalSum = sum;
-                    mInstance.getDelivery().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (null != imageDownLoadListener) {
-                                for (ImageDownLoadListener listener : imageDownLoadListener)
-                                    listener.inProgress(finalSum * 1.0f / total, total);
-                            }
-                        }
-                    });
+                    refreshProgress(finalSum * 1.0f / total, total);
                 }
                 fos.flush();
             } finally {
-                try {
-                    response.body().close();
-                    if (is != null) is.close();
-                } catch (IOException e) {
-                }
-                try {
-                    if (fos != null) fos.close();
-                } catch (IOException e) {
-                }
-
+                response.body().close();
+                if (is != null) is.close();
+                if (fos != null) fos.close();
             }
         }
 
+        /**
+         * 如果已经开启就不再执行网络加载操作
+         */
+        public void start() {
+            checkState();
+            if (!isStarted) {
+                execute();
+            }
+        }
 
-        public void sendFailResultCallback(final Exception e) {
+        private void checkState() {
+            switch (currentState) {
+                case DOWNLOADING:
+                    refreshProgress(currentProgress, total);
+                    break;
+                case DOWNLOADFINISH:
+                    downloadSuccess();
+            }
+        }
+
+        private void downloadCancel() {
+            for (ImageDownLoadListener listener : imageDownLoadListener)
+                listener.onCancel();
+        }
+
+        private void refreshProgress(final float progress, final long total) {
+            this.currentProgress = progress;
+            this.total = total;
+            mInstance.getDelivery().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (ImageDownLoadListener listener : imageDownLoadListener)
+                        listener.inProgress(progress, total);
+                }
+            });
+        }
+
+        private void downloadFail(final Exception e) {
+            currentState = State.DOWNLOADERROR;
+            String key = MyApplication.generate(url);
+            String destUrl = MyApplication.getImageCachePath() + "/" + key;
+            File file = new File(destUrl);
+            if (file.exists()) file.delete();
+            if (imageDownLoadListener.size() == 0) {
+                //发现没有绑定任何监听，自动移除当前build
+                mInstance.map.remove(url);
+                return;
+            }
             mInstance.mPlatform.execute(new Runnable() {
                 @Override
                 public void run() {
-                    if (imageDownLoadListener == null) return;
                     for (ImageDownLoadListener listener : imageDownLoadListener)
                         listener.onError(e);
                 }
             });
         }
 
-        public void sendSuccessResultCallback() {
-            isSucess = true;
-            mInstance.map.remove(key);
-            if (imageDownLoadListener == null) return;
+        private void downloadSuccess() {
+            isSuccess = true;
+            currentState = State.DOWNLOADFINISH;
+            if (imageDownLoadListener.size() == 0) {
+                //发现没有绑定任何监听，自动移除当前build
+                mInstance.map.remove(url);
+                return;
+            }
             mInstance.mPlatform.execute(new Runnable() {
                 @Override
                 public void run() {
-                    if (null != imageDownLoadListener) {
-                        for (ImageDownLoadListener listener : imageDownLoadListener)
-                            listener.onSuccess(getCacheFileName(url));
-                    }
+                    for (ImageDownLoadListener listener : imageDownLoadListener)
+                        listener.onSuccess();
                 }
             });
         }
 
-        public void removeAllListener() {
-            imageDownLoadListener = null;
+        public void removeListener(ImageDownLoadListener listener) {
+            imageDownLoadListener.remove(listener);
+            if (imageDownLoadListener.size() == 0 && currentState == State.DOWNLOADFINISH) {
+                mInstance.map.remove(url);
+            }
         }
     }
 
@@ -248,29 +330,9 @@ public class OkHttpImageLoad {
 
         void onError(Exception e);
 
-        void onSuccess(String path);
+        void onSuccess();
 
         void onCancel();
     }
 
-    public static String getCacheFileName(String url) {
-        String key = MyApplication.generate(url);
-        String destUrl = MyApplication.getImageCachePath() + "/" + key;
-        return destUrl;
-    }
-
-    public static boolean isCached(String url) {
-        String key = MyApplication.generate(url);
-        String destUrl = MyApplication.getImageCachePath() + "/" + key;
-        File file = new File(destUrl);
-        if (file.exists()) {
-            int size = MyApplication.getMaxSizeOfBitMap(destUrl);
-            if (size > 0) {
-                return true;
-            } else {
-                file.delete();
-            }
-        }
-        return false;
-    }
 }

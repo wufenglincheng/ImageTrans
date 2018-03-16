@@ -17,8 +17,4 @@
         android:id="@+id/action_fit_xy"
         android:title="FIT_XY"
         app:showAsAction="never" />
-    <item
-        android:id="@+id/action_clear_cache"
-        android:title="清空缓存"
-        app:showAsAction="never" />
 </menu>
