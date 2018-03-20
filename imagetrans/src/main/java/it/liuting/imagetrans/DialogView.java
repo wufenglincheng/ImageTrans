@@ -23,6 +23,7 @@ class DialogView extends FrameLayout implements OnTransformListener {
     private ImageTransBuild build;
     private InterceptViewPager viewPager;
     private ImagePagerAdapter mAdapter;
+    private boolean isOpened = false;
 
     DialogView(Context context, ImageTransBuild build) {
         super(context);
@@ -74,8 +75,10 @@ class DialogView extends FrameLayout implements OnTransformListener {
 
     @Override
     public void transformEnd() {
+        isOpened = true;
         build.imageTransAdapter.onOpenTransEnd();
         viewPager.setCanScroll(true);
+        mAdapter.loadWhenTransEnd();
     }
 
     class ImagePagerAdapter extends PagerAdapter {
@@ -96,7 +99,7 @@ class DialogView extends FrameLayout implements OnTransformListener {
                 if (build.needTransOpen(position, false)) {
                     view.bindTransOpenListener(DialogView.this);
                 }
-                view.init();
+                view.init(isOpened);
                 itemViewSparseArray.put(position, view);
             }
             container.addView(view);
@@ -121,6 +124,13 @@ class DialogView extends FrameLayout implements OnTransformListener {
         @Override
         public boolean isViewFromObject(View view, Object object) {
             return view == object;
+        }
+
+        public void loadWhenTransEnd() {
+            for (int i = 0; i < itemViewSparseArray.size(); i++) {
+                ImageItemView itemView = itemViewSparseArray.valueAt(i);
+                if (itemView != null) itemView.loadImageWhenTransEnd();
+            }
         }
     }
 }

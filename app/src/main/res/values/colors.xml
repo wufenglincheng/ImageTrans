@@ -5,4 +5,5 @@
     <color name="colorAccent">#FF4081</color>
 
     <color name="pers30_black">#4c000000</color>
+    <color name="button_default">#e0e0e6</color>
 </resources>

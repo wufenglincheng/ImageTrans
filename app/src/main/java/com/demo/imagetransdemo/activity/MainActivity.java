@@ -12,6 +12,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Toast;
@@ -26,6 +27,7 @@ import com.demo.imagetransdemo.view.DragParentView;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.liuting.imagetrans.ITConfig;
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
 import it.liuting.imagetrans.listener.SourceImageViewGet;
@@ -43,6 +45,10 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     ImageView imageView;
     AppCompatSeekBar widthSeekBar;
     AppCompatSeekBar heightSeekBar;
+    Button centerCrop;
+    Button startCrop;
+    Button endCrop;
+    Button fitXy;
     int maxSize = MyApplication.getScreenWidth();
     ScaleType scaleType = ScaleType.CENTER_CROP;
     String drawableId = "https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1496996959&di=13c094ba73675a24df2ad1d2c730c02c&imgtype=jpg&er=1&src=http%3A%2F%2Fdasouji.com%2Fwp-content%2Fuploads%2F2015%2F07%2F%25E9%2595%25BF%25E8%258A%25B1%25E5%259B%25BE-6.jpg";
@@ -57,6 +63,11 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
         dragParentView = (DragParentView) findViewById(R.id.drag_parent_view);
         widthSeekBar = (AppCompatSeekBar) findViewById(R.id.seek_bar_width);
         heightSeekBar = (AppCompatSeekBar) findViewById(R.id.seek_bar_height);
+        centerCrop = (Button) findViewById(R.id.center_crop);
+        startCrop = (Button) findViewById(R.id.top_crop);
+        endCrop = (Button) findViewById(R.id.bottom_crop);
+        fitXy = (Button) findViewById(R.id.fix_xy);
+        centerCrop.setSelected(true);
         widthSeekBar.setOnSeekBarChangeListener(this);
         heightSeekBar.setOnSeekBarChangeListener(this);
         widthSeekBar.setMax(maxSize);
@@ -81,6 +92,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                             }
                         })
                         .setImageLoad(new MyImageLoad())
+                        .setConfig(new ITConfig().noThumbWhenCached())
                         .show();
             }
         });
@@ -199,6 +211,10 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                 scaleType = ScaleType.FIT_XY;
                 break;
         }
+        centerCrop.setSelected(centerCrop.getId() == view.getId());
+        startCrop.setSelected(startCrop.getId() == view.getId());
+        endCrop.setSelected(endCrop.getId() == view.getId());
+        fitXy.setSelected(fitXy.getId() == view.getId());
         loadImage();
     }
 

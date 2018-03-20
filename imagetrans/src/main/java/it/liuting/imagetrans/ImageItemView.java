@@ -33,6 +33,7 @@ public class ImageItemView extends FrameLayout implements
     private boolean loadFinish = false;
     private boolean isCached = false;
     private String uniqueStr;
+    private boolean needTransOpen;
 
     public ImageItemView(@NonNull Context context, ImageTransBuild build, int pos, String url) {
         super(context);
@@ -42,28 +43,32 @@ public class ImageItemView extends FrameLayout implements
         uniqueStr = UUID.randomUUID().toString();
     }
 
-    void init() {
+    void init(boolean opened) {
         imageView = new TransImageView(getContext());
         addView(imageView, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         progressBar = build.inflateProgress(getContext(), this);
         hideProgress();
-        final boolean need = build.needTransOpen(pos, true);
-        isCached = build.imageLoad.isCached(url);
+        needTransOpen = build.needTransOpen(pos, true);
         imageView.settingConfig(build.itConfig, new ThumbConfig(build.sourceImageViewGet.getImageView(pos), getResources(), build.scaleType));
         imageView.setTransStateChangeListener(this);
         imageView.setOnPullCloseListener(this);
         imageView.setOnLongClickListener(this);
         imageView.setOnClickListener(this);
-        final boolean needShowThumb = !build.itConfig.noThumb && !(build.itConfig.noThumbWhenCached && build.imageLoad.isCached(url));
-        if (needShowThumb) {
-            imageView.showThumb(need);
-        } else if (!need) {
-            imageView.setBackgroundAlpha(255);
-        }
-        loadImage(need || needShowThumb);
+        if (needTransOpen || opened) loadImage();
     }
 
-    void loadImage(final boolean needTrans) {
+    void loadImageWhenTransEnd() {
+        if (!needTransOpen) loadImage();
+    }
+
+    private void loadImage() {
+        isCached = build.imageLoad.isCached(url);
+        final boolean needShowThumb = !build.itConfig.noThumb && !(build.itConfig.noThumbWhenCached && build.imageLoad.isCached(url));
+        if (needShowThumb) {
+            imageView.showThumb(needTransOpen);
+        } else if (!needTransOpen) {
+            imageView.setBackgroundAlpha(255);
+        }
         build.imageLoad.loadImage(url, new ImageLoad.LoadCallback() {
             @Override
             public void progress(float progress) {
@@ -76,7 +81,7 @@ public class ImageItemView extends FrameLayout implements
             public void loadFinish(Drawable drawable) {
                 hideProgress();
                 loadFinish = true;
-                imageView.showImage(drawable, needTrans);
+                imageView.showImage(drawable, needTransOpen || needShowThumb);
             }
         }, imageView, uniqueStr);
     }

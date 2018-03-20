@@ -11,10 +11,10 @@
 
         <ImageView
             android:id="@+id/top_panel_cancel"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:layout_centerVertical="true"
-            android:layout_marginLeft="10dp"
+            android:scaleType="centerInside"
             android:src="@drawable/ic_close" />
 
         <ImageView
