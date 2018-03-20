@@ -9,7 +9,6 @@ import android.widget.Toast;
 import com.demo.imagetransdemo.MyApplication;
 import com.demo.imagetransdemo.R;
 import com.demo.imagetransdemo.TileBitmapDrawable;
-import com.demo.imagetransdemo.view.RingLoadingView;
 import com.demo.imagetransdemo.view.RoundPageIndicator;
 
 import it.liuting.imagetrans.ImageTransAdapter;
@@ -74,14 +73,7 @@ public class MyImageTransAdapter extends ImageTransAdapter {
     }
 
     @Override
-    protected void onProgressChange(View progressBar, float progress) {
-        if (progressBar instanceof RingLoadingView) {
-            ((RingLoadingView) progressBar).setProgress(progress);
-        }
-    }
-
-    @Override
-    protected boolean onClick(View v) {
+    protected boolean onClick(View v,int pos) {
         if (isShow) {
             showPanel();
         } else {
@@ -93,7 +85,7 @@ public class MyImageTransAdapter extends ImageTransAdapter {
     }
 
     @Override
-    protected void onLongClick(View v) {
+    protected void onLongClick(View v,int pos) {
         Toast.makeText(view.getContext(), "long click", Toast.LENGTH_SHORT).show();
     }
 

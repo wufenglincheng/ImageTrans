@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.util.DisplayMetrics;
 
 import com.bumptech.glide.Glide;
+import com.squareup.leakcanary.LeakCanary;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,6 +33,8 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        if (LeakCanary.isInAnalyzerProcess(this)) return;
+        LeakCanary.install(this);
         mDisplayMetrics = getResources().getDisplayMetrics();
         cThreadPool = Executors.newFixedThreadPool(5);
         IMAGE_CACHE_PATH = getExternalCacheDir().getPath();

@@ -20,6 +20,7 @@ import com.demo.imagetransdemo.R;
 import com.demo.imagetransdemo.adapter.CustomTransform;
 import com.demo.imagetransdemo.adapter.MyImageLoad;
 import com.demo.imagetransdemo.adapter.MyImageTransAdapter;
+import com.demo.imagetransdemo.adapter.MyProgressBarGet;
 import com.demo.imagetransdemo.view.RingLoadingView;
 import com.demo.imagetransdemo.view.SpaceDecoration;
 
@@ -138,7 +139,7 @@ public class NetImageActivity extends AppCompatActivity {
                             })
                             .setImageLoad(new MyImageLoad())
                             .setNowIndex(position)
-                            .setProgressBar(RingLoadingView.class, MyApplication.dpToPx(50), MyApplication.dpToPx(50))
+                            .setProgressBar(new MyProgressBarGet())
                             .setAdapter(new MyImageTransAdapter())
                             .show();
                 }

@@ -64,6 +64,8 @@ class TransformAttacher {
             changeState(TransState.THUMB_TO_CLOSE);
         } else if (currentStateInfo.state == TransState.ORI) {
             changeState(TransState.ORI_TO_CLOSE);
+        } else if (currentStateInfo.state == TransState.DEFAULT) {
+            changeState(TransState.CLOSEED);
         }
     }
 

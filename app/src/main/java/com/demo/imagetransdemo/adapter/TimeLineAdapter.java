@@ -20,6 +20,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.liuting.imagetrans.ITConfig;
 import it.liuting.imagetrans.ImageTrans;
 import it.liuting.imagetrans.ScaleType;
 import it.liuting.imagetrans.listener.SourceImageViewGet;
@@ -116,8 +117,9 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
                                 })
                                 .setImageLoad(new MyImageLoad())
                                 .setNowIndex(position)
-                                .setProgressBar(RingLoadingView.class, MyApplication.dpToPx(50), MyApplication.dpToPx(50))
+                                .setProgressBar(new MyProgressBarGet())
                                 .setAdapter(new MyImageTransAdapter())
+                                .setConfig(new ITConfig().noThumbWhenCached())
                                 .show();
                     }
                 });
@@ -163,8 +165,9 @@ public class TimeLineAdapter extends RecyclerView.Adapter<TimeLineAdapter.ViewHo
                         })
                         .setImageLoad(new MyImageLoad())
                         .setNowIndex(0)
-                        .setProgressBar(RingLoadingView.class, MyApplication.dpToPx(50), MyApplication.dpToPx(50))
+                        .setProgressBar(new MyProgressBarGet())
                         .setAdapter(new MyImageTransAdapter())
+                        .setConfig(new ITConfig().noThumbWhenCached())
                         .show();
             }
         });

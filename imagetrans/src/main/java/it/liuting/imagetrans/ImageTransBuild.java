@@ -1,5 +1,6 @@
 package it.liuting.imagetrans;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.support.v4.view.ViewPager;
@@ -8,9 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
-import java.lang.reflect.Constructor;
 import java.util.List;
 
+import it.liuting.imagetrans.listener.ProgressViewGet;
 import it.liuting.imagetrans.listener.SourceImageViewGet;
 
 /**
@@ -22,14 +23,12 @@ class ImageTransBuild {
     protected int nowIndex;
     protected List<String> imageList;
     protected SourceImageViewGet sourceImageViewGet;
+    protected ProgressViewGet progressViewGet;
     protected ITConfig itConfig;
     protected ImageTransAdapter imageTransAdapter;
     protected ImageLoad imageLoad;
     protected ScaleType scaleType = ScaleType.CENTER_CROP;
-    protected DialogInterface dialogInterface;
-    protected Class progressClass;
-    protected int progressWidth = ViewGroup.LayoutParams.WRAP_CONTENT;
-    protected int progressHeight = ViewGroup.LayoutParams.WRAP_CONTENT;
+    protected Dialog dialog;
 
     void checkParam() {
         if (itConfig == null)
@@ -59,19 +58,19 @@ class ImageTransBuild {
     }
 
     View inflateProgress(Context context, FrameLayout rootView) {
-        if (progressClass != null) {
-            try {
-                Class[] parameterType = {Context.class};
-                Constructor constructor = progressClass.getConstructor(parameterType);
-                Object[] parameter = {context};
-                View progressBar = (View) constructor.newInstance(parameter);
-                FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(progressWidth, progressHeight);
-                lp.gravity = Gravity.CENTER;
-                rootView.addView(progressBar, lp);
-                return progressBar;
-            } catch (Exception e) {
-                e.printStackTrace();
+        if (progressViewGet != null) {
+            View progress = progressViewGet.getProgress(context);
+            if (progress == null) return null;
+            int width = ViewGroup.LayoutParams.WRAP_CONTENT;
+            int height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            if (progress.getLayoutParams() != null) {
+                width = progress.getLayoutParams().width;
+                height = progress.getLayoutParams().height;
             }
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(width, height);
+            lp.gravity = Gravity.CENTER;
+            rootView.addView(progress, lp);
+            return progress;
         }
         return null;
     }

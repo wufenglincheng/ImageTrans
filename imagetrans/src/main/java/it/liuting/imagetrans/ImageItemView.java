@@ -1,67 +1,64 @@
 package it.liuting.imagetrans;
 
+import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.view.LayoutInflater;
+import android.support.annotation.NonNull;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.FrameLayout;
 
 import java.util.UUID;
 
+import it.liuting.imagetrans.listener.OnPullCloseListener;
 import it.liuting.imagetrans.listener.OnTransformListener;
 
-
 /**
- * Created by liuting on 18/3/14.
+ * Created by liuting on 18/3/19.
  */
 
-public class ImageFragment extends Fragment implements TransformAttacher.TransStateChangeListener {
-
-    public static ImageFragment newInstance(int pos, String url, ImageTransBuild build) {
-        ImageFragment fragment = new ImageFragment();
-        fragment.url = url;
-        fragment.build = build;
-        fragment.pos = pos;
-        return fragment;
-    }
-
-    private String url;
-
-    private TransImageView imageView;
+public class ImageItemView extends FrameLayout implements
+        TransformAttacher.TransStateChangeListener,
+        OnPullCloseListener,
+        View.OnLongClickListener,
+        TransImageView.OnClickListener {
     private ImageTransBuild build;
-    private int pos;
-    private OnTransformListener transformOpenListener;
-    private String uniqueStr;
+    private TransImageView imageView;
     private View progressBar;
+    private int pos;
+    private String url;
+    private OnTransformListener transformOpenListener;
+
     private boolean transOpenEnd;
     private boolean loadFinish = false;
     private boolean isCached = false;
+    private String uniqueStr;
 
-    @Nullable
-    @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public ImageItemView(@NonNull Context context, ImageTransBuild build, int pos, String url) {
+        super(context);
+        this.build = build;
+        this.pos = pos;
+        this.url = url;
         uniqueStr = UUID.randomUUID().toString();
-        View view = inflater.inflate(R.layout.image_fragment, container, false);
-        progressBar = build.inflateProgress(getContext(), (FrameLayout) view);
-        imageView = (TransImageView) view.findViewById(R.id.imageView);
-        return view;
     }
 
-    @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+    void init() {
+        imageView = new TransImageView(getContext());
+        addView(imageView, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        progressBar = build.inflateProgress(getContext(), this);
         hideProgress();
         final boolean need = build.needTransOpen(pos, true);
         isCached = build.imageLoad.isCached(url);
         imageView.settingConfig(build.itConfig, new ThumbConfig(build.sourceImageViewGet.getImageView(pos), getResources(), build.scaleType));
-        imageView.setImageTransAdapter(build.imageTransAdapter);
         imageView.setTransStateChangeListener(this);
+        imageView.setOnPullCloseListener(this);
+        imageView.setOnLongClickListener(this);
+        imageView.setOnClickListener(this);
         final boolean needShowThumb = !build.itConfig.noThumb && !(build.itConfig.noThumbWhenCached && build.imageLoad.isCached(url));
         if (needShowThumb) {
             imageView.showThumb(need);
+        } else if (!need) {
+            imageView.setBackgroundAlpha(255);
         }
         loadImage(need || needShowThumb);
     }
@@ -70,9 +67,8 @@ public class ImageFragment extends Fragment implements TransformAttacher.TransSt
         build.imageLoad.loadImage(url, new ImageLoad.LoadCallback() {
             @Override
             public void progress(float progress) {
-                if (getUserVisibleHint() && transOpenEnd) {
-                    if (progressBar != null)
-                        build.imageTransAdapter.onProgressChange(progressBar, progress);
+                if (transOpenEnd) {
+                    progressChange(progress);
                 }
             }
 
@@ -80,18 +76,29 @@ public class ImageFragment extends Fragment implements TransformAttacher.TransSt
             public void loadFinish(Drawable drawable) {
                 hideProgress();
                 loadFinish = true;
-                imageView.showImage(drawable, needTrans && getUserVisibleHint());
+                imageView.showImage(drawable, needTrans);
             }
         }, imageView, uniqueStr);
     }
 
-    public void runClose() {
+    void onDismiss() {
         imageView.showCloseTransform();
+    }
+
+    void onDestroy() {
+        build.imageLoad.cancel(url, uniqueStr);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        onDestroy();
     }
 
     public void bindTransOpenListener(OnTransformListener listener) {
         this.transformOpenListener = listener;
     }
+
 
     private void showProgress() {
         if (progressBar != null && !loadFinish) progressBar.setVisibility(View.VISIBLE);
@@ -99,6 +106,10 @@ public class ImageFragment extends Fragment implements TransformAttacher.TransSt
 
     private void hideProgress() {
         if (progressBar != null) progressBar.setVisibility(View.GONE);
+    }
+
+    private void progressChange(float progress) {
+        if (progressBar != null) build.progressViewGet.onProgressChange(progressBar, progress);
     }
 
     @Override
@@ -120,27 +131,47 @@ public class ImageFragment extends Fragment implements TransformAttacher.TransSt
             case THUMB_TO_CLOSE:
             case ORI_TO_CLOSE:
                 build.imageTransAdapter.onCloseTransStart();
+                getViewPager(getParent()).setCanScroll(false);
                 break;
             case CLOSEED:
                 build.imageTransAdapter.onCloseTransEnd();
-                build.dialogInterface.dismiss();
+                build.dialog.dismiss();
                 break;
         }
     }
 
-    @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        if (isVisibleToUser && transOpenEnd) {
-            showProgress();
+    InterceptViewPager getViewPager(ViewParent parent) {
+        if (parent == null) return null;
+        if (parent instanceof InterceptViewPager) {
+            return (InterceptViewPager) parent;
         } else {
-            hideProgress();
+            return getViewPager(parent.getParent());
         }
     }
 
     @Override
-    public void onDestroy() {
-        build.imageLoad.cancel(url, uniqueStr);
-        super.onDestroy();
+    public boolean onLongClick(View v) {
+        build.imageTransAdapter.onLongClick(v, pos);
+        return false;
+    }
+
+    @Override
+    public boolean onClick(View v) {
+        return build.imageTransAdapter.onClick(v, pos);
+    }
+
+    @Override
+    public void onClose() {
+
+    }
+
+    @Override
+    public void onPull(float range) {
+        build.imageTransAdapter.onPullRange(range);
+    }
+
+    @Override
+    public void onCancel() {
+        build.imageTransAdapter.onPullCancel();
     }
 }

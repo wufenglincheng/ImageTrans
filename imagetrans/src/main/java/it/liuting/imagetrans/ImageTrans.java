@@ -1,38 +1,36 @@
 package it.liuting.imagetrans;
 
+import android.app.Dialog;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.DialogInterface;
-import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
+import android.os.Build;
 import android.support.v7.app.AlertDialog;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 
 import java.util.List;
 
+import it.liuting.imagetrans.listener.ProgressViewGet;
 import it.liuting.imagetrans.listener.SourceImageViewGet;
 
 /**
  * Created by liuting on 17/5/27.
  */
 
-public class ImageTrans extends DialogFragment implements DialogInterface.OnKeyListener, DialogInterface {
-    private AlertDialog mDialog;
+public class ImageTrans implements DialogInterface.OnShowListener,
+        DialogInterface.OnKeyListener, DialogInterface {
+    private Dialog mDialog;
     private ImageTransBuild build;
-    private DialogViewInflater dialogViewInflater;
+    private DialogView dialogView;
     private Context mContext;
 
     public static ImageTrans with(Context context) {
-        ImageTrans imageTrans = new ImageTrans();
-        imageTrans.mContext = context;
-        imageTrans.build = new ImageTransBuild();
-        return imageTrans;
+        return new ImageTrans(context);
+    }
+
+    ImageTrans(Context context) {
+        this.mContext = context;
+        build = new ImageTransBuild();
     }
 
     public ImageTrans setNowIndex(int index) {
@@ -71,40 +69,35 @@ public class ImageTrans extends DialogFragment implements DialogInterface.OnKeyL
         return this;
     }
 
-    public ImageTrans setProgressBar(Class c,int width,int height){
-        build.progressClass = c;
-        build.progressWidth = width;
-        build.progressHeight = height;
+    public ImageTrans setProgressBar(ProgressViewGet progressViewGet) {
+        build.progressViewGet = progressViewGet;
         return this;
     }
 
+    private View createView() {
+        dialogView = new DialogView(mContext, build);
+        return dialogView;
+    }
+
+    private int getDialogStyle() {
+        int dialogStyle;
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT) {
+            dialogStyle = android.R.style.Theme_Translucent_NoTitleBar_Fullscreen;
+        } else {
+            dialogStyle = android.R.style.Theme_Translucent_NoTitleBar;
+        }
+        return dialogStyle;
+    }
+
     public void show() {
-        FragmentManager fragmentManager = getSupportFragmentManager(mContext);
-        if (fragmentManager == null)
-            throw new NullPointerException("fragmentManager is null,the dialog must be call on FragmentActivity");
-        show(fragmentManager, "ImageTrans");
-    }
-
-    @Nullable
-    @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         build.checkParam();
-        build.dialogInterface = this;
-        getDialog().setOnKeyListener(this);
-        dialogViewInflater = new DialogViewInflater(build, getChildFragmentManager());
-        return dialogViewInflater.createView(inflater);
-    }
-
-    @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        dialogViewInflater.init(view);
-    }
-
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setStyle(STYLE_NO_TITLE, R.style.MyDialogStyle);
+        mDialog = new AlertDialog.Builder(mContext, getDialogStyle())
+                .setView(createView())
+                .create();
+        build.dialog = mDialog;
+        mDialog.setOnShowListener(this);
+        mDialog.setOnKeyListener(this);
+        mDialog.show();
     }
 
     @Override
@@ -112,34 +105,24 @@ public class ImageTrans extends DialogFragment implements DialogInterface.OnKeyL
         if (keyCode == KeyEvent.KEYCODE_BACK &&
                 event.getAction() == KeyEvent.ACTION_UP &&
                 !event.isCanceled()) {
-            if (dialogViewInflater != null) dialogViewInflater.runClose();
+            dialogView.onDismiss(mDialog);
         }
         return true;
     }
 
-
-    private FragmentManager getSupportFragmentManager(Context source) {
-        Context finalContext = source;
-        while (finalContext instanceof ContextWrapper) {
-            if (finalContext == null) {
-                break;
-            }
-            if (finalContext instanceof FragmentActivity) {
-                return ((FragmentActivity) finalContext).getSupportFragmentManager();
-            }
-            Context tempContext = ((ContextWrapper) finalContext).getBaseContext();
-            if (finalContext != tempContext) {
-                finalContext = tempContext;
-            } else {
-                finalContext = null;
-            }
-        }
-        return null;
+    @Override
+    public void onShow(DialogInterface dialog) {
+        dialogView.onCreate(this);
     }
 
     @Override
     public void cancel() {
-        if (dialogViewInflater != null) dialogViewInflater.runClose();
-        else dismiss();
+        dismiss();
     }
+
+    @Override
+    public void dismiss() {
+        dialogView.onDismiss(mDialog);
+    }
+
 }

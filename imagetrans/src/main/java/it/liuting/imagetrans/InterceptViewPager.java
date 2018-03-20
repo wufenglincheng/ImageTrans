@@ -32,6 +32,6 @@ public class InterceptViewPager extends ViewPager {
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         return isCanScroll && super.onTouchEvent(ev);
-
     }
+
 }

@@ -84,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                         .show();
             }
         });
+        loadImage();
     }
 
     @Override
@@ -94,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
 
     @NeedsPermission({Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE})
     void initPermission() {
-        loadImage();
+
     }
 
     @OnShowRationale({Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE})

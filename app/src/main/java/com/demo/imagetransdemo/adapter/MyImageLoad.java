@@ -131,6 +131,7 @@ public class MyImageLoad implements ImageLoad {
     @Override
     public void cancel(String url, String unique) {
         removeLoadCallback(unique);
+
         OkHttpImageLoad.destroy(url, imageDownLoadListenerMap.remove(unique));
     }
 

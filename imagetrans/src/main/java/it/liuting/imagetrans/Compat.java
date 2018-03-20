@@ -43,6 +43,7 @@ class Compat {
 
     public static int getBackGroundAlpha(Drawable background) {
         int alpha;
+        if (background == null) return 0;
         if (VERSION.SDK_INT > VERSION_CODES.KITKAT) {
             alpha = background.getAlpha();
         } else {

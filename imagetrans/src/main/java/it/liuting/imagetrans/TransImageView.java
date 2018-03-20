@@ -28,7 +28,7 @@ public class TransImageView extends ImageView implements TransformAttacher.Trans
     private TransformAttacher transformAttacher;
     private TransformAttacher.TransStateChangeListener transStateChangeListener;
     private OnPullCloseListener onPullCloseListener;
-    private ImageTransAdapter imagesTransAdapter;
+    private OnClickListener onClickListener;
     private Drawable mDrawable = null;
 
     public TransImageView(Context context) {
@@ -57,24 +57,23 @@ public class TransImageView extends ImageView implements TransformAttacher.Trans
             @Override
             public void onClose() {
                 showCloseTransform();
+                if (onPullCloseListener != null) onPullCloseListener.onClose();
             }
 
             @Override
             public void onPull(float range) {
-                if (imagesTransAdapter != null) imagesTransAdapter.onPullRange(range);
+                if (onPullCloseListener != null) onPullCloseListener.onPull(range);
             }
 
             @Override
             public void onCancel() {
-                if (imagesTransAdapter != null) imagesTransAdapter.onPullCancel();
+                if (onPullCloseListener != null) onPullCloseListener.onCancel();
             }
         });
-        imageGesturesAttacher.setOnClickListener(new OnClickListener() {
+        imageGesturesAttacher.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (imagesTransAdapter != null) {
-                    if (!imagesTransAdapter.onClick(v)) showCloseTransform();
-                } else {
+                if (onClickListener == null || !onClickListener.onClick(v)) {
                     showCloseTransform();
                 }
             }
@@ -82,7 +81,7 @@ public class TransImageView extends ImageView implements TransformAttacher.Trans
         imageGesturesAttacher.setOnLongClickListener(new OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                if (imagesTransAdapter != null) imagesTransAdapter.onLongClick(v);
+                performLongClick();
                 return false;
             }
         });
@@ -187,20 +186,12 @@ public class TransImageView extends ImageView implements TransformAttacher.Trans
             case ORI_TO_CLOSE:
                 if (getParent() != null) {
                     imageGesturesAttacher.requestDisallowInterceptTouchEvent(true);
-                    getViewPager(getParent()).setCanScroll(false);
                 }
                 break;
         }
         if (transStateChangeListener != null) transStateChangeListener.onChange(state);
     }
 
-    public void setTransStateChangeListener(TransformAttacher.TransStateChangeListener listener) {
-        this.transStateChangeListener = listener;
-    }
-
-    public void setImageTransAdapter(ImageTransAdapter adapter) {
-        this.imagesTransAdapter = adapter;
-    }
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -219,12 +210,25 @@ public class TransImageView extends ImageView implements TransformAttacher.Trans
         }
     }
 
-    InterceptViewPager getViewPager(ViewParent parent) {
-        if (parent == null) return null;
-        if (parent instanceof InterceptViewPager) {
-            return (InterceptViewPager) parent;
-        } else {
-            return getViewPager(parent.getParent());
-        }
+    public void setTransStateChangeListener(TransformAttacher.TransStateChangeListener listener) {
+        this.transStateChangeListener = listener;
+    }
+
+    public void setOnPullCloseListener(OnPullCloseListener listener) {
+        this.onPullCloseListener = listener;
+    }
+
+    @Deprecated
+    @Override
+    public void setOnClickListener(@Nullable View.OnClickListener l) {
+        super.setOnClickListener(l);
+    }
+
+    public void setOnClickListener(OnClickListener listener) {
+        this.onClickListener = listener;
+    }
+
+    public interface OnClickListener {
+        boolean onClick(View v);
     }
 }
