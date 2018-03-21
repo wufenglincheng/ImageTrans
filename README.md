@@ -4,7 +4,7 @@
 * 2.仿照微信的下拉手势关闭图片
 ##### 具体demo 请下载：[demo.apk](preview/app-debug.apk)</br>
 ## 预览
-根据四种缩略图裁剪方式变形动画
+根据四种缩略图裁剪方式变形动画</br>
 <img src="preview/preview_1.gif" />
 <img src="preview/preview_2.gif" />
 <img src="preview/preview_3.gif" />
