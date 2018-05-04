@@ -72,6 +72,7 @@ class TransformAttacher {
     void changeState(TransState state) {
         if (running) return;
         running = true;
+        boolean autoChange = false;
         if (state != TransState.CLOSEED && state != TransState.DEFAULT) {
             currentStateInfo = currentStateInfo.nextStateInfo(state);
             if (currentStateInfo.needTrans) {
@@ -81,9 +82,13 @@ class TransformAttacher {
                 transformMatrix = new Matrix(currentStateInfo.endM);
                 transformState = currentStateInfo.state;
                 running = false;
+                autoChange = true;
             }
         }
         if (listener != null) listener.onChange(state);
+        if (autoChange && state == TransState.THUMB_TO_ORI) {
+            changeState(TransState.ORI);
+        }
     }
 
     private void runTransform() {
