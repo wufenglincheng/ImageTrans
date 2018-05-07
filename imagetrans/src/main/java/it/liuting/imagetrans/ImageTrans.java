@@ -106,9 +106,11 @@ public class ImageTrans implements DialogInterface.OnShowListener,
                 event.getAction() == KeyEvent.ACTION_UP &&
                 !event.isCanceled()) {
             dialogView.onDismiss(mDialog);
+            return true;
         }
-        return true;
+        return false;
     }
+
 
     @Override
     public void onShow(DialogInterface dialog) {
